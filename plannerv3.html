@@ -1,0 +1,3216 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planeador de Vida Integral</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/weekday.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/localeData.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/es.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .modal {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+
+        .modal.hidden {
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        .modal.hidden .modal-content {
+            transform: translateY(-20px);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .param-checkbox {
+            transform: scale(1.2);
+            margin-right: 0.75rem;
+        }
+
+        .day-label {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .day-label input:checked+span {
+            background-color: #3B82F6;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .dark .day-label input:checked+span {
+            background-color: #00BCD4;
+            color: #121212;
+        }
+
+        /* Estilos para Pestañas */
+        .tab-btn.active {
+            background-color: white;
+            color: #3B82F6;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .dark .tab-btn.active {
+            background-color: #00BCD4;
+            color: #121212;
+        }
+
+        /* Estilos para Drag & Drop */
+        .draggable-card {
+            cursor: grab;
+        }
+
+        .draggable-card:active {
+            cursor: grabbing;
+        }
+
+        .dragging {
+            opacity: 0.5;
+            background: #f0f8ff;
+            /* AliceBlue */
+            border: 2px dashed #3B82F6 !important;
+        }
+
+        .drag-over {
+            transform: scale(1.02);
+        }
+
+        /* Estilos para Acordeón de Actividades */
+        details>summary {
+            list-style: none;
+            cursor: pointer;
+        }
+
+        details>summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details .content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            padding: 0 1rem;
+        }
+
+        details[open] .content {
+            max-height: 2000px;
+            /* Suficientemente grande */
+            padding: 1rem 1rem 0.5rem;
+        }
+
+        /* Estilos para Bloc de Notas */
+        #notepad-editor {
+            min-height: 50vh;
+            outline: none;
+        }
+
+        #notepad-editor mark {
+            background-color: yellow;
+            color: black;
+        }
+
+        .dark #notepad-editor mark {
+            background-color: #FFC107;
+        }
+
+        .toolbar-btn {
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+        }
+
+        .toolbar-btn:hover {
+            background-color: #E5E7EB;
+        }
+
+        .dark .toolbar-btn:hover {
+            background-color: #374151;
+        }
+
+        body.dark {
+            background-color: #121212;
+            color: #FFFFFF;
+        }
+
+        .dark main,
+        .dark aside>div,
+        .dark .modal-content {
+            background-color: #1E1E1E;
+            border: 1px solid #333;
+        }
+
+        .dark h1,
+        .dark h2,
+        .dark h3,
+        .dark h4 {
+            color: #FFFFFF;
+        }
+
+        .dark p,
+        .dark label,
+        .dark .text-sm,
+        .dark th {
+            color: #CCCCCC;
+        }
+
+        .dark .text-gray-900,
+        .dark .text-gray-800,
+        .dark .text-gray-700 {
+            color: #FFFFFF;
+        }
+
+        .dark .text-gray-600,
+        .dark .text-gray-500,
+        .dark .text-gray-400 {
+            color: #888888;
+        }
+
+        .dark #view-selector,
+        .dark #chart-type-selector,
+        .dark #workout-chart-selector {
+            background-color: #121212;
+        }
+
+        .dark .view-btn,
+        .dark .chart-btn {
+            color: #CCCCCC;
+        }
+
+        /* Corrected dark mode active chart button */
+        .dark .chart-btn.active {
+            background-color: #00BCD4;
+            color: #121212;
+        }
+        /* Light mode active chart button */
+        .chart-btn.active {
+            background-color: white;
+            color: #3B82F6;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+
+        .dark #prev-date,
+        .dark #next-date,
+        .dark #theme-toggle {
+            color: #CCCCCC;
+        }
+
+        .dark #prev-date:hover,
+        .dark #next-date:hover,
+        .dark #theme-toggle:hover {
+            background-color: #333;
+        }
+
+        .dark #add-activity-day-button {
+            background-color: #333;
+            color: #CCCCCC;
+        }
+
+        .dark #add-activity-day-button:hover {
+            background-color: #444;
+        }
+
+        .dark #open-activity-modal-btn,
+        .dark .bg-blue-600,
+        .dark #open-workout-modal-btn,
+        .dark .bg-green-600,
+        .dark #open-nutrition-modal-btn,
+        .dark .bg-yellow-600 {
+            background-color: #00BCD4;
+            color: #121212;
+        }
+
+        .dark #open-activity-modal-btn:hover,
+        .dark .bg-blue-600:hover,
+        .dark #open-workout-modal-btn:hover,
+        .dark .bg-green-600:hover,
+        .dark #open-nutrition-modal-btn:hover,
+        .dark .bg-yellow-600:hover {
+            background-color: #4dd0e1;
+        }
+
+        .dark .bg-red-600 {
+            background-color: #f44336;
+            color: #FFFFFF;
+        }
+
+        .dark .bg-red-600:hover {
+            background-color: #ef5350;
+        }
+
+        .dark input,
+        .dark select,
+        .dark textarea {
+            background-color: #121212;
+            border-color: #333;
+            color: #FFFFFF;
+        }
+
+        .dark input::placeholder,
+        .dark select::placeholder,
+        .dark textarea::placeholder {
+            color: #888888;
+        }
+
+        .dark input:focus,
+        .dark select:focus,
+        .dark textarea:focus {
+            border-color: #00BCD4;
+            box-shadow: 0 0 0 1px #00BCD4;
+        }
+
+        .dark #parameters-container,
+        .dark .bg-gray-50,
+        .dark #workout-exercises-container {
+            background-color: #121212;
+            border-color: #333;
+        }
+
+        .dark #add-parameter-btn,
+        .dark #add-exercise-btn {
+            color: #00BCD4;
+        }
+
+        .dark ::-webkit-scrollbar-track {
+            background: #1E1E1E;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #555;
+        }
+
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+
+        .dark .shadow-lg {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        .dark .border {
+            border-color: #333;
+        }
+
+        .dark .bg-white {
+            background-color: #1E1E1E;
+        }
+
+        .dark #master-activity-list .font-medium {
+            color: #FFFFFF;
+        }
+
+        .dark .edit-master-activity-btn {
+            color: #888888;
+        }
+
+        .dark .edit-master-activity-btn:hover {
+            color: #00BCD4;
+        }
+
+        .dark .text-blue-600 {
+            color: #00BCD4;
+        }
+
+        .dark .bg-blue-50 {
+            background-color: rgba(0, 188, 212, 0.1);
+        }
+
+        .dark .text-blue-700 {
+            color: #00BCD4;
+        }
+
+        .dark .bg-blue-100 {
+            background-color: rgba(0, 188, 212, 0.15);
+        }
+
+        .dark .text-yellow-600,
+        .dark .text-yellow-500 {
+            color: #FFC107;
+        }
+
+        .dark .bg-gray-100 {
+            background-color: #121212;
+        }
+
+        .dark .bg-gray-200 {
+            background-color: #333;
+        }
+
+        .dark .param-checkbox:checked {
+            background-color: currentColor;
+        }
+
+        .dark .is-completed {
+            color: #888888;
+        }
+
+        .dark .border-blue-400 {
+            border-color: #03A9F4;
+        }
+
+        .dark .text-blue-500 {
+            color: #03A9F4;
+        }
+
+        .dark .border-green-400 {
+            border-color: #4CAF50;
+        }
+
+        .dark .text-green-500 {
+            color: #4CAF50;
+        }
+
+        .dark .border-indigo-400 {
+            border-color: #9C27B0;
+        }
+
+        .dark .text-indigo-500 {
+            color: #9C27B0;
+        }
+
+        .dark .border-yellow-400 {
+            border-color: #FFC107;
+        }
+
+        .dark .border-purple-400 {
+            border-color: #673AB7;
+        }
+
+        .dark .text-purple-500 {
+            color: #673AB7;
+        }
+
+        .dark .border-pink-400 {
+            border-color: #E91E63;
+        }
+
+        .dark .text-pink-500 {
+            color: #E91E63;
+        }
+
+        .dark .bg-green-100 {
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+
+        .dark .text-green-800 {
+            color: #4CAF50;
+        }
+
+        .dark .warm-up-set {
+            background-color: rgba(255, 193, 7, 0.1) !important;
+            border-left: 2px solid #FFC107;
+        }
+
+        .dark .dark\:warm-up-set {
+            background-color: rgba(255, 193, 7, 0.2) !important;
+        }
+
+        .dark .nutrition-summary-grid {
+            background-color: #121212;
+        }
+
+        .dark .bg-green-500 {
+            background-color: #4CAF50;
+        }
+
+        .dark .text-red-500 {
+            color: #f44336;
+        }
+
+        .dark .dragging {
+            background: #374151;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="mb-8 flex justify-between items-start">
+            <div class="flex items-center gap-4">
+                <h1 class="text-4xl font-bold text-gray-900">Planeador de Vida Integral</h1>
+                <div id="live-clock" class="text-2xl font-semibold text-gray-500 bg-gray-200 dark:bg-gray-700 px-4 py-1 rounded-lg"></div>
+            </div>
+            <button id="theme-toggle" class="text-xl p-3 rounded-full hover:bg-gray-200">
+                <i class="fas fa-moon"></i>
+            </button>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <main class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-lg">
+                <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
+                    <nav id="main-tabs" class="flex space-x-1" aria-label="Tabs">
+                        <button data-tab="planner" class="tab-btn active px-4 py-2 text-sm font-medium rounded-t-lg">
+                            <i class="fas fa-calendar-day mr-2"></i>Planeador
+                        </button>
+                        <button data-tab="progress" class="tab-btn px-4 py-2 text-sm font-medium rounded-t-lg">
+                            <i class="fas fa-chart-line mr-2"></i>Progreso
+                        </button>
+                        <button data-tab="notepad" class="tab-btn px-4 py-2 text-sm font-medium rounded-t-lg">
+                            <i class="fas fa-highlighter mr-2"></i>Bloc de Notas
+                        </button>
+                        <button data-tab="cashflow" class="tab-btn px-4 py-2 text-sm font-medium rounded-t-lg">
+                            <i class="fas fa-money-bill-wave mr-2"></i>Flujo de Caja
+                        </button>
+                    </nav>
+                </div>
+
+                <div id="planner-wrapper">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-6">
+                        <div id="view-selector" class="flex space-x-1 bg-gray-200 p-1 rounded-lg mb-4 sm:mb-0">
+                            <button data-view="daily" class="view-btn bg-white text-blue-600 px-4 py-2 rounded-md shadow font-semibold">Diario</button>
+                            <button data-view="weekly" class="view-btn text-gray-600 px-4 py-2 rounded-md font-semibold">Semanal</button>
+                            <button data-view="monthly" class="view-btn text-gray-600 px-4 py-2 rounded-md font-semibold">Mensual</button>
+                        </div>
+                        <div id="date-navigator" class="flex items-center space-x-4">
+                            <button id="prev-date" class="p-2 rounded-full hover:bg-gray-200 transition-colors"><i class="fas fa-chevron-left"></i></button>
+                            <h2 id="current-date-display" class="text-xl font-bold text-center w-64"></h2>
+                            <button id="next-date" class="p-2 rounded-full hover:bg-gray-200 transition-colors"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+
+                    <button id="add-activity-day-button" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-lg transition-colors mb-4"><i class="fas fa-plus mr-2"></i>Añadir Actividad a este día</button>
+
+                    <div id="planner-container" class="min-h-[60vh]"></div>
+                </div>
+
+                <div id="progress-wrapper" class="hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold">Progreso de Puntos</h3>
+                         <div id="chart-type-selector" class="flex space-x-1 bg-gray-200 p-1 rounded-lg">
+                              <button data-chart="daily" class="chart-btn active px-3 py-1 rounded-md text-sm font-semibold">Diario</button>
+                              <button data-chart="weekly" class="chart-btn px-3 py-1 rounded-md text-sm font-semibold">Semanal</button>
+                              <button data-chart="monthly" class="chart-btn px-3 py-1 rounded-md text-sm font-semibold">Mensual</button>
+                         </div>
+                    </div>
+                    <div id="charts-container" class="space-y-4">
+                         <div class="relative h-64"><canvas id="progressChart"></canvas></div>
+                         <div class="relative h-64" id="progressLineChartContainer"><canvas id="progressLineChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div id="notepad-wrapper" class="hidden">
+                    <div class="border rounded-lg p-2 bg-gray-50 dark:bg-gray-800 mb-4">
+                        <div id="notepad-toolbar" class="flex items-center gap-2 flex-wrap">
+                            <button data-command="bold" class="toolbar-btn"><i class="fas fa-bold"></i></button>
+                            <button data-command="italic" class="toolbar-btn"><i class="fas fa-italic"></i></button>
+                            <button data-command="highlight" class="toolbar-btn"><i class="fas fa-highlighter"></i></button>
+                        </div>
+                    </div>
+                    <div id="notepad-editor" contenteditable="true" class="p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+                </div>
+
+                <div id="cashflow-wrapper" class="hidden">
+                    <div id="cashflow-summary" class="grid grid-cols-3 gap-4 mb-6 text-center">
+                        <div>
+                            <p class="text-sm text-green-500">Ingresos Totales</p>
+                            <p id="total-income" class="text-2xl font-bold"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-red-500">Egresos Totales</p>
+                            <p id="total-expense" class="text-2xl font-bold"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Saldo Actual</p>
+                            <p id="current-balance" class="text-2xl font-bold"></p>
+                        </div>
+                    </div>
+                    <form id="cashflow-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
+                        <div class="md:col-span-2">
+                            <label for="transaction-description" class="block text-sm font-medium">Descripción</label>
+                            <input type="text" id="transaction-description" required class="w-full mt-1 border-gray-300 rounded-lg shadow-sm">
+                        </div>
+                        <div>
+                            <label for="transaction-amount" class="block text-sm font-medium">Monto</label>
+                            <input type="number" id="transaction-amount" required min="0" step="0.01" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Tipo</label>
+                            <div class="flex gap-2">
+                                <label class="flex-1"><input type="radio" name="transaction-type" value="income" checked class="hidden peer"> <span class="block text-center p-2 rounded-lg bg-gray-200 peer-checked:bg-green-500 peer-checked:text-white cursor-pointer">Ingreso</span></label>
+                                <label class="flex-1"><input type="radio" name="transaction-type" value="expense" class="hidden peer"> <span class="block text-center p-2 rounded-lg bg-gray-200 peer-checked:bg-red-500 peer-checked:text-white cursor-pointer">Egreso</span></label>
+                            </div>
+                        </div>
+                        <div class="md:col-span-4">
+                            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Añadir Transacción</button>
+                        </div>
+                    </form>
+                    <div id="cashflow-table-container" class="max-h-[40vh] overflow-y-auto"></div>
+                </div>
+
+            </main>
+
+            <aside class="space-y-8">
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-bold mb-4">Mis Actividades</h3>
+                    <div id="master-activity-list" class="space-y-4 max-h-96 overflow-y-auto pr-2"></div>
+                    <div class="mt-6 space-y-3">
+                        <button id="open-activity-modal-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-all shadow-md">
+                            <i class="fas fa-plus mr-2"></i>Crear Actividad Genérica
+                        </button>
+                        <button id="open-workout-modal-btn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-all shadow-md">
+                            <i class="fas fa-dumbbell mr-2"></i>Crear Rutina de Entrenamiento
+                        </button>
+                        <button id="open-nutrition-modal-btn" class="w-full bg-yellow-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-yellow-700 transition-all shadow-md">
+                            <i class="fas fa-utensils mr-2"></i>Registrar Comida
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-bold mb-4">Gestión de Datos</h3>
+                    <div class="space-y-3">
+                        <button id="export-data-btn" class="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700 transition-all shadow-md">
+                            <i class="fas fa-download mr-2"></i>Exportar Datos
+                        </button>
+                        <button id="import-data-btn" class="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700 transition-all shadow-md">
+                            <i class="fas fa-upload mr-2"></i>Importar Datos
+                        </button>
+                        <input type="file" id="import-file-input" class="hidden" accept=".json">
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <div id="activity-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-8 transform">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="modal-title" class="text-2xl font-bold">Crear Actividad</h2>
+                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            </div>
+            <form id="activity-form" class="space-y-6">
+                <input type="hidden" id="activity-id">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="activity-name" class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                        <input type="text" id="activity-name" class="w-full border-gray-300 rounded-lg shadow-sm" required>
+                    </div>
+                    <div>
+                        <label for="activity-type-select" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Actividad</label>
+                        <select id="activity-type-select" class="w-full border-gray-300 rounded-lg shadow-sm">
+                            <option value="generic">Genérica</option>
+                            <option value="pomodoro">Pomodoro</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label for="activity-category" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                    <select id="activity-category" class="w-full border-gray-300 rounded-lg shadow-sm" required></select>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Parámetros / Subtareas</h3>
+                    <div id="parameters-container" class="space-y-3 max-h-40 overflow-y-auto p-2 border rounded-lg bg-gray-50"></div>
+                       <div class="flex items-center gap-4">
+                            <button type="button" id="add-parameter-btn" class="mt-3 text-sm font-semibold text-blue-600 hover:text-blue-800"><i class="fas fa-plus-circle mr-1"></i>Añadir Subtarea</button>
+                       </div>
+                </div>
+                <div class="flex justify-between items-center pt-4">
+                    <button type="button" id="delete-activity-btn" class="hidden bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Eliminar</button>
+                    <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="add-to-day-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8 transform">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Añadir Actividad al Día</h2>
+                <button id="close-add-to-day-modal-btn" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            </div>
+            <form id="add-to-day-form" class="space-y-4">
+                <div>
+                    <label for="day-activity-select" class="block text-sm font-medium text-gray-700 mb-1">Actividad</label>
+                    <select id="day-activity-select" class="w-full border-gray-300 rounded-lg shadow-sm" required></select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="day-activity-start-time" class="block text-sm font-medium text-gray-700 mb-1">Hora de Inicio</label>
+                        <input type="time" id="day-activity-start-time" class="w-full border-gray-300 rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="day-activity-end-time" class="block text-sm font-medium text-gray-700 mb-1">Hora de Término</label>
+                        <input type="time" id="day-activity-end-time" class="w-full border-gray-300 rounded-lg shadow-sm">
+                    </div>
+                </div>
+                <div id="recurrence-section">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Repetir Actividad</label>
+                    <div class="flex justify-between items-center space-x-1" id="recurrence-days">
+                        <label class="day-label"><input type="checkbox" name="recurrence" value="1" class="hidden"> <span class="cursor-pointer p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200">L</span></label>
+                        <label class="day-label"><input type="checkbox" name="recurrence" value="2" class="hidden"> <span class="cursor-pointer p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200">M</span></label>
+                        <label class="day-label"><input type="checkbox" name="recurrence" value="3" class="hidden"> <span class="cursor-pointer p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200">M</span></label>
+                        <label class="day-label"><input type="checkbox" name="recurrence" value="4" class="hidden"> <span class="cursor-pointer p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200">J</span></label>
+                        <label class="day-label"><input type="checkbox" name="recurrence" value="5" class="hidden"> <span class="cursor-pointer p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200">V</span></label>
+                        <label class="day-label"><input type="checkbox" name="recurrence" value="6" class="hidden"> <span class="cursor-pointer p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200">S</span></label>
+                        <label class="day-label"><input type="checkbox" name="recurrence" value="0" class="hidden"> <span class="cursor-pointer p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200">D</span></label>
+                    </div>
+                </div>
+
+                <div class="flex justify-end pt-4">
+                    <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Añadir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="workout-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white w-full max-w-4xl rounded-2xl shadow-2xl p-8 transform max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="workout-modal-title" class="text-2xl font-bold">Crear Rutina de Entrenamiento</h2>
+                <button id="close-workout-modal-btn" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            </div>
+            <form id="workout-form" class="space-y-6 flex-grow overflow-y-auto pr-4">
+                <input type="hidden" id="workout-id">
+                <div>
+                    <label for="workout-name" class="block text-sm font-medium text-gray-700 mb-1">Nombre de la Rutina</label>
+                    <input type="text" id="workout-name" class="w-full border-gray-300 rounded-lg shadow-sm" required>
+                </div>
+                
+                <div class="border-t pt-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Añadir Ejercicio Manualmente</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-7 gap-4 items-end p-4 bg-gray-50 rounded-lg">
+                        <div class="md:col-span-2">
+                            <label for="muscle-group-select" class="block text-sm font-medium">Grupo Muscular</label>
+                            <select id="muscle-group-select" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm"></select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="exercise-select" class="block text-sm font-medium">Ejercicio</label>
+                            <select id="exercise-select" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm"></select>
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-sm font-medium">&nbsp;</label>
+                            <button type="button" id="add-custom-exercise-btn" class="w-full text-sm font-semibold text-blue-600 hover:text-blue-800">o Crear Nuevo</button>
+                        </div>
+                        <div>
+                            <label for="exercise-weight" class="block text-sm font-medium">Peso Obj. (kg)</label>
+                            <input type="number" id="exercise-weight" value="20" min="0" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm">
+                        </div>
+                        <div>
+                            <label for="exercise-points" class="block text-sm font-medium">Puntos/Serie</label>
+                            <input type="number" id="exercise-points" value="1" min="0" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm">
+                        </div>
+                        <div>
+                            <label for="exercise-sets" class="block text-sm font-medium">Series</label>
+                            <input type="number" id="exercise-sets" value="4" min="1" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm">
+                        </div>
+                        <div>
+                            <label for="exercise-reps" class="block text-sm font-medium">Reps</label>
+                            <input type="text" id="exercise-reps" value="8-12" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="exercise-notes" class="block text-sm font-medium">Notas</label>
+                            <input type="text" id="exercise-notes" placeholder="ej. Enfocar en el negativo" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm">
+                        </div>
+                        <div class="col-span-full md:col-span-1">
+                            <button type="button" id="add-exercise-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Añadir</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Ejercicios en la Rutina</h3>
+                    <div id="workout-exercises-container" class="space-y-3 min-h-[200px] p-2 border rounded-lg"></div>
+                </div>
+
+                <div class="flex justify-between items-center pt-4 border-t">
+                    <button type="button" id="delete-workout-btn" class="hidden bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Eliminar Rutina</button>
+                    <button type="submit" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700">Guardar Rutina</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="nutrition-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8 transform">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="nutrition-modal-title" class="text-2xl font-bold">Registrar Comida</h2>
+                <button id="close-nutrition-modal-btn" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            </div>
+            <form id="nutrition-form" class="space-y-4">
+                <input type="hidden" id="nutrition-id">
+                <div>
+                    <label for="meal-type" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Comida</label>
+                    <select id="meal-type" class="w-full border-gray-300 rounded-lg shadow-sm">
+                        <option value="Desayuno">Desayuno</option>
+                        <option value="Almuerzo">Almuerzo</option>
+                        <option value="Cena">Cena</option>
+                        <option value="Snacks">Snacks</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="food-name" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Alimento</label>
+                    <input type="text" id="food-name" class="w-full border-gray-300 rounded-lg shadow-sm" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="food-calories" class="block text-sm font-medium text-gray-700 mb-1">Calorías (kcal)</label>
+                        <input type="number" id="food-calories" min="0" class="w-full border-gray-300 rounded-lg shadow-sm" required>
+                    </div>
+                    <div>
+                        <label for="food-protein" class="block text-sm font-medium text-gray-700 mb-1">Proteínas (g)</label>
+                        <input type="number" id="food-protein" min="0" class="w-full border-gray-300 rounded-lg shadow-sm" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="food-carbs" class="block text-sm font-medium text-gray-700 mb-1">Carbohidratos (g)</label>
+                        <input type="number" id="food-carbs" min="0" class="w-full border-gray-300 rounded-lg shadow-sm" required>
+                    </div>
+                    <div>
+                        <label for="food-fat" class="block text-sm font-medium text-gray-700 mb-1">Grasas (g)</label>
+                        <input type="number" id="food-fat" min="0" class="w-full border-gray-300 rounded-lg shadow-sm" required>
+                    </div>
+                </div>
+                 <div>
+                    <label for="food-points" class="block text-sm font-medium text-gray-700 mb-1">Puntos</label>
+                    <input type="number" id="food-points" min="0" value="5" class="w-full border-gray-300 rounded-lg shadow-sm">
+                </div>
+                <div class="flex justify-end pt-4">
+                    <button type="submit" class="bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-yellow-700">Guardar Alimento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="confirm-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 transform text-center">
+            <h2 id="confirm-title" class="text-xl font-bold mb-4">Confirmar Acción</h2>
+            <p id="confirm-message" class="text-gray-600 mb-6">¿Estás seguro?</p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-cancel-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-ok-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            dayjs.extend(dayjs_plugin_utc);
+            dayjs.extend(dayjs_plugin_weekday);
+            dayjs.extend(dayjs_plugin_localeData);
+            dayjs.locale('es');
+
+            // =================================================================
+            // GESTOR DE TEMPORIZADORES
+            // =================================================================
+            const timerManager = {
+                timers: {},
+                _interval: null,
+
+                init() {
+                    if (this._interval) return;
+                    this._interval = setInterval(() => this._tick(), 1000);
+                    const savedTimers = JSON.parse(sessionStorage.getItem('lifePlannerTimers')) || {};
+                    for (const id in savedTimers) {
+                        this.create(id, savedTimers[id]);
+                    }
+                },
+                _save() {
+                    sessionStorage.setItem('lifePlannerTimers', JSON.stringify(this.timers));
+                },
+                _tick() {
+                    let changed = false;
+                    for (const id in this.timers) {
+                        const timer = this.timers[id];
+                        if (timer.isRunning) {
+                            changed = true;
+                            const now = Date.now();
+                            const elapsedSinceLastTick = now - timer.lastTick;
+                            timer.lastTick = now;
+
+                            if (timer.mode === 'stopwatch') {
+                                timer.elapsed += elapsedSinceLastTick;
+                            } else { // countdown
+                                timer.elapsed -= elapsedSinceLastTick;
+                                if (timer.elapsed <= 0) {
+                                    timer.elapsed = 0;
+                                    timer.isRunning = false;
+                                    if (timer.onEnd) timer.onEnd();
+                                }
+                            }
+                        }
+                        const displayEl = document.querySelector(`.timer-display[data-timer-id="${id}"]`);
+                        if (displayEl) {
+                           displayEl.textContent = formatTime(timer.elapsed);
+                        }
+                    }
+                    if (changed) this._save();
+                },
+                create(id, options = {}) {
+                    this.timers[id] = {
+                        id,
+                        mode: options.mode || 'countdown',
+                        duration: options.duration || 0,
+                        elapsed: options.elapsed !== undefined ? options.elapsed : (options.mode === 'countdown' ? options.duration : 0),
+                        isRunning: options.isRunning || false,
+                        lastTick: options.lastTick || Date.now(),
+                        onEnd: options.onEnd || null,
+                    };
+                    return this.timers[id];
+                },
+                get(id) { return this.timers[id]; },
+                start(id) {
+                    const timer = this.get(id);
+                    if (timer && !timer.isRunning) {
+                        timer.isRunning = true;
+                        timer.lastTick = Date.now();
+                        this._save();
+                    }
+                },
+                pause(id) {
+                    const timer = this.get(id);
+                    if (timer && timer.isRunning) {
+                        timer.isRunning = false;
+                        this._save();
+                    }
+                },
+                stop(id) {
+                    delete this.timers[id];
+                    this._save();
+                },
+                reset(id) {
+                    const timer = this.get(id);
+                    if (timer) {
+                        timer.isRunning = false;
+                        timer.elapsed = timer.mode === 'countdown' ? timer.duration : 0;
+                        this._save();
+                    }
+                }
+            };
+
+            let state = {
+                currentDate: dayjs(),
+                currentView: 'daily',
+                activeTab: 'planner',
+                activities: [],
+                scheduledActivities: {},
+                pointsLog: {}, // { 'YYYY-MM-DD': { 'categoryId': points, ... }, ... }
+                nutritionLog: {},
+                notepadContent: '',
+                cashFlowTransactions: [],
+                theme: 'light',
+                chartType: 'daily', // 'daily', 'weekly', 'monthly'
+            };
+
+            const CATEGORIES = {
+                academic: { name: 'Académico', color: 'blue', icon: 'fa-book' },
+                sport: { name: 'Deporte', color: 'green', icon: 'fa-dumbbell' },
+                hygiene: { name: 'Higiene', color: 'indigo', icon: 'fa-soap' },
+                food: { name: 'Alimentación', color: 'yellow', icon: 'fa-utensils' },
+                mental: { name: 'Bienestar Mental', color: 'purple', icon: 'fa-brain'},
+                social: { name: 'Social', color: 'pink', icon: 'fa-users'}
+            };
+
+            const EXERCISES = {
+                pecho: ['Press de Banca con Barra', 'Press de Banca con Mancuernas', 'Aperturas con Mancuernas', 'Flexiones', 'Fondos en Paralelas'],
+                espalda: ['Dominadas', 'Remo con Barra', 'Remo con Mancuerna', 'Jalón al Pecho', 'Peso Muerto'],
+                pierna: ['Sentadillas con Barra', 'Prensa de Piernas', 'Zancadas', 'Extensiones de Cuádriceps', 'Curl Femoral'],
+                hombro: ['Press Militar con Barra', 'Elevaciones Laterales con Mancuernas', 'Press Arnold', 'Face Pulls'],
+                biceps: ['Curl con Barra', 'Curl con Mancuernas', 'Curl Martillo', 'Curl de Concentración'],
+                triceps: ['Press Francés', 'Extensiones de Tríceps en Polea', 'Fondos de Tríceps', 'Patada de Tríceps'],
+                antebrazo: ['Curl de Muñeca (Supinación)', 'Curl de Muñeca Inverso (Pronación)', 'Paseo del Granjero', 'Rodillo de Muñeca'],
+                abdomen: ['Plancha', 'Crunches', 'Elevaciones de Piernas', 'Rueda Abdominal']
+            };
+
+            const DOMElements = {
+                body: document.body,
+                liveClock: document.getElementById('live-clock'),
+                themeToggle: document.getElementById('theme-toggle'),
+                mainTabs: document.getElementById('main-tabs'),
+                viewSelector: document.getElementById('view-selector'),
+                chartTypeSelector: document.getElementById('chart-type-selector'),
+                currentDateDisplay: document.getElementById('current-date-display'),
+                prevDateBtn: document.getElementById('prev-date'),
+                nextDateBtn: document.getElementById('next-date'),
+                plannerWrapper: document.getElementById('planner-wrapper'),
+                progressWrapper: document.getElementById('progress-wrapper'),
+                notepadWrapper: document.getElementById('notepad-wrapper'),
+                cashflowWrapper: document.getElementById('cashflow-wrapper'),
+                plannerContainer: document.getElementById('planner-container'),
+                masterActivityList: document.getElementById('master-activity-list'),
+                progressChartCanvas: document.getElementById('progressChart'),
+                progressLineChartCanvas: document.getElementById('progressLineChart'),
+                progressLineChartContainer: document.getElementById('progressLineChartContainer'),
+                activityModal: document.getElementById('activity-modal'),
+                addToDayModal: document.getElementById('add-to-day-modal'),
+                workoutModal: document.getElementById('workout-modal'),
+                nutritionModal: document.getElementById('nutrition-modal'),
+                confirmModal: document.getElementById('confirm-modal'),
+                openActivityModalBtn: document.getElementById('open-activity-modal-btn'),
+                openWorkoutModalBtn: document.getElementById('open-workout-modal-btn'),
+                openNutritionModalBtn: document.getElementById('open-nutrition-modal-btn'),
+                closeModalBtn: document.getElementById('close-modal-btn'),
+                closeAddToDayModalBtn: document.getElementById('close-add-to-day-modal-btn'),
+                closeWorkoutModalBtn: document.getElementById('close-workout-modal-btn'),
+                closeNutritionModalBtn: document.getElementById('close-nutrition-modal-btn'),
+                addActivityDayButton: document.getElementById('add-activity-day-button'),
+                activityForm: document.getElementById('activity-form'),
+                addToDayForm: document.getElementById('add-to-day-form'),
+                workoutForm: document.getElementById('workout-form'),
+                nutritionForm: document.getElementById('nutrition-form'),
+                cashflowForm: document.getElementById('cashflow-form'),
+                modalTitle: document.getElementById('modal-title'),
+                activityIdInput: document.getElementById('activity-id'),
+                activityNameInput: document.getElementById('activity-name'),
+                activityCategorySelect: document.getElementById('activity-category'),
+                activityTypeSelect: document.getElementById('activity-type-select'),
+                parametersContainer: document.getElementById('parameters-container'),
+                addParameterBtn: document.getElementById('add-parameter-btn'),
+                deleteActivityBtn: document.getElementById('delete-activity-btn'),
+                dayActivitySelect: document.getElementById('day-activity-select'),
+                workoutModalTitle: document.getElementById('workout-modal-title'),
+                workoutIdInput: document.getElementById('workout-id'),
+                workoutNameInput: document.getElementById('workout-name'),
+                muscleGroupSelect: document.getElementById('muscle-group-select'),
+                exerciseSelect: document.getElementById('exercise-select'),
+                addCustomExerciseBtn: document.getElementById('add-custom-exercise-btn'),
+                addExerciseBtn: document.getElementById('add-exercise-btn'),
+                workoutExercisesContainer: document.getElementById('workout-exercises-container'),
+                deleteWorkoutBtn: document.getElementById('delete-workout-btn'),
+                exportDataBtn: document.getElementById('export-data-btn'),
+                importDataBtn: document.getElementById('import-data-btn'),
+                importFileInput: document.getElementById('import-file-input'),
+                notepadEditor: document.getElementById('notepad-editor'),
+                notepadToolbar: document.getElementById('notepad-toolbar'),
+            };
+            
+            let progressChart, progressLineChart;
+
+            // --- TIME & CLOCK FUNCTIONS ---
+            function updateLiveClock() {
+                const now = new Date();
+                DOMElements.liveClock.textContent = now.toLocaleTimeString('es-CL', { timeZone: 'America/Santiago' });
+            }
+
+            function formatTime(ms) {
+                if (isNaN(ms) || ms < 0) ms = 0;
+                const totalSeconds = Math.round(ms / 1000);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+
+            function parseTimeToMs(timeString) {
+                if (!timeString || typeof timeString !== 'string') return 0;
+                const minutes = parseInt(timeString.match(/(\d+)\s*min/)?.[1] || '0', 10);
+                const seconds = parseInt(timeString.match(/(\d+)\s*sec/)?.[1] || '0', 10);
+                return ((minutes * 60) + seconds) * 1000;
+            }
+
+            function getDurationText(startTime, endTime) {
+                if (!startTime || !endTime || startTime === "00:00" || endTime === "00:00") {
+                    return '';
+                }
+                const start = dayjs(`2000-01-01T${startTime}`);
+                const end = dayjs(`2000-01-01T${endTime}`);
+                if (end.isBefore(start)) return '';
+
+                const diffMinutes = end.diff(start, 'minute');
+                if (diffMinutes <= 0) return '';
+
+                const hours = Math.floor(diffMinutes / 60);
+                const minutes = diffMinutes % 60;
+
+                let durationText = '';
+                if (hours > 0) durationText += `${hours}h `;
+                if (minutes > 0) durationText += `${minutes}min`;
+
+                return `<span class="text-xs font-medium text-gray-400">(${durationText.trim()})</span>`;
+            }
+
+            function checkForDateChange() {
+                const now = dayjs();
+                const lastKnownDate = dayjs(state.currentDate);
+                
+                if (!now.isSame(lastKnownDate, 'day')) {
+                    if (lastKnownDate.isSame(now.subtract(1, 'day'), 'day')) {
+                        console.log("Day has changed! Updating app to new day.");
+                        recalculateDailyPoints(lastKnownDate.format('YYYY-MM-DD'));
+                        saveState(); 
+
+                        state.currentDate = now;
+                        render();
+                    }
+                }
+            }
+            
+            function loadInitialData() {
+                const defaultActivities = [
+                    { id: Date.now() + 1, type: 'generic', name: 'Rutina de Skin Care', categoryId: 'hygiene', params: [{ name: 'Exfoliar', value: '3 min', points: 5 }, { name: 'Serum', value: '2 min', points: 5 }, { name: 'Hidratante', value: '2 min', points: 5 }] },
+                    { id: Date.now() + 2, type: 'pomodoro', name: 'Estudiar (Pomodoro)', categoryId: 'academic', params: [{ name: 'Bloque 1', value: '25 min', points: 10 }, { name: 'Descanso', value: '5 min', points: 0 }, { name: 'Bloque 2', value: '25 min', points: 10 }, { name: 'Descanso', value: '5 min', points: 0 }, { name: 'Bloque 3', value: '25 min', points: 10 }, { name: 'Descanso', value: '5 min', points: 0 }, { name: 'Bloque 4', value: '25 min', points: 10 }] },
+                    { id: Date.now() + 3, type: 'workout', name: 'Miércoles Back Day y Antebrazo', categoryId: 'sport', workoutPlan: { exercises: [
+                        { name: 'Dominadas', sets: 4, reps: '8-12', weight: 12, notes: 'ojala peso efectivo 12kg', points: 15 },
+                        { name: 'Remo con Barra', sets: 4, reps: '8-12', weight: 60, notes: '', points: 10 },
+                    ]}},
+                ];
+                const savedState = JSON.parse(localStorage.getItem('lifePlannerState'));
+
+                if (savedState) {
+                    Object.assign(state, savedState);
+                    state.currentDate = dayjs(savedState.currentDate);
+                    if (!['daily', 'weekly', 'monthly'].includes(state.chartType)) {
+                        state.chartType = 'daily';
+                    }
+                } else {
+                    state.activities = defaultActivities;
+                }
+
+                state.theme = localStorage.getItem('lifePlannerTheme') || 'light';
+                applyTheme();
+                populateCategorySelect();
+            }
+
+            function saveState() {
+                localStorage.setItem('lifePlannerState', JSON.stringify({ ...state, currentDate: state.currentDate.toISOString() }));
+            }
+
+            function applyTheme() {
+                if (state.theme === 'dark') {
+                    DOMElements.body.classList.add('dark');
+                    DOMElements.themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+                } else {
+                    DOMElements.body.classList.remove('dark');
+                    DOMElements.themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+                }
+                document.querySelectorAll('#chart-type-selector .chart-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.chart === state.chartType);
+                    if (btn.dataset.chart === state.chartType) {
+                         if (state.theme === 'dark') {
+                             btn.classList.add('bg-cyan-500', 'text-gray-900', 'shadow');
+                             btn.classList.remove('text-gray-300');
+                         } else {
+                             btn.classList.add('bg-white', 'text-blue-600', 'shadow');
+                              btn.classList.remove('text-gray-600');
+                         }
+                    } else {
+                         if (state.theme === 'dark') {
+                             btn.classList.add('text-gray-300');
+                             btn.classList.remove('bg-cyan-500', 'text-gray-900', 'shadow');
+                         } else {
+                             btn.classList.add('text-gray-600');
+                             btn.classList.remove('bg-white', 'text-blue-600', 'shadow');
+                         }
+                    }
+                });
+                updateChart();
+            }
+
+            function toggleTheme() {
+                state.theme = state.theme === 'light' ? 'dark' : 'light';
+                localStorage.setItem('lifePlannerTheme', state.theme);
+                applyTheme();
+            }
+
+            function init() {
+                timerManager.init();
+                updateLiveClock();
+                setInterval(updateLiveClock, 1000);
+                setInterval(checkForDateChange, 60 * 1000);
+                loadInitialData();
+                addEventListeners();
+                render();
+            }
+
+            function addEventListeners() {
+                DOMElements.themeToggle.addEventListener('click', toggleTheme);
+                DOMElements.viewSelector.addEventListener('click', handleViewChange);
+                DOMElements.chartTypeSelector.addEventListener('click', handleChartTypeChange);
+                DOMElements.prevDateBtn.addEventListener('click', () => navigateDate(-1));
+                DOMElements.nextDateBtn.addEventListener('click', () => navigateDate(1));
+                DOMElements.mainTabs.addEventListener('click', handleTabChange);
+
+                // Modals
+                DOMElements.openActivityModalBtn.addEventListener('click', () => openActivityModal());
+                DOMElements.openWorkoutModalBtn.addEventListener('click', () => openWorkoutModal());
+                DOMElements.openNutritionModalBtn.addEventListener('click', () => openNutritionModal());
+
+                DOMElements.closeModalBtn.addEventListener('click', closeActivityModal);
+                DOMElements.activityModal.addEventListener('click', (e) => e.target === DOMElements.activityModal && closeActivityModal());
+                DOMElements.closeAddToDayModalBtn.addEventListener('click', () => toggleModal('add-to-day-modal', false));
+                DOMElements.addToDayModal.addEventListener('click', (e) => e.target === DOMElements.addToDayModal && toggleModal('add-to-day-modal', false));
+                DOMElements.closeWorkoutModalBtn.addEventListener('click', () => toggleModal('workout-modal', false));
+                DOMElements.workoutModal.addEventListener('click', (e) => e.target === DOMElements.workoutModal && toggleModal('workout-modal', false));
+                DOMElements.closeNutritionModalBtn.addEventListener('click', () => toggleModal('nutrition-modal', false));
+                DOMElements.nutritionModal.addEventListener('click', (e) => e.target === DOMElements.nutritionModal && toggleModal('nutrition-modal', false));
+
+                // Forms
+                DOMElements.activityForm.addEventListener('submit', handleFormSubmit);
+                DOMElements.addToDayForm.addEventListener('submit', handleAddActivityToDay);
+                DOMElements.workoutForm.addEventListener('submit', handleWorkoutFormSubmit);
+                DOMElements.nutritionForm.addEventListener('submit', handleNutritionFormSubmit);
+                DOMElements.cashflowForm.addEventListener('submit', handleCashflowFormSubmit);
+
+                DOMElements.addParameterBtn.addEventListener('click', () => addParameterInput());
+                DOMElements.deleteActivityBtn.addEventListener('click', () => {
+                    showConfirm('¿Eliminar actividad maestra?', 'Esto la eliminará de todos los días de forma permanente.', () => {
+                        deleteActivity(parseInt(DOMElements.activityIdInput.value));
+                    });
+                });
+                DOMElements.deleteWorkoutBtn.addEventListener('click', () => {
+                    showConfirm('¿Eliminar rutina maestra?', 'Esto la eliminará de todos los días de forma permanente.', () => {
+                        deleteActivity(parseInt(DOMElements.workoutIdInput.value));
+                    });
+                });
+
+                DOMElements.masterActivityList.addEventListener('click', (e) => {
+                    const button = e.target.closest('.edit-master-activity-btn');
+                    if (!button) return;
+                    const activityId = parseInt(button.dataset.id);
+                    const activity = state.activities.find(a => a.id === activityId);
+                    if (!activity) return;
+                    if (activity.type === 'workout') openWorkoutModal(activityId);
+                    else openActivityModal(activityId);
+                });
+                DOMElements.addActivityDayButton.addEventListener('click', openAddActivityToDayModal);
+
+                // Workout Modal
+                DOMElements.muscleGroupSelect.addEventListener('change', populateExerciseSelect);
+                DOMElements.addCustomExerciseBtn.addEventListener('click', handleAddCustomExercise);
+                DOMElements.addExerciseBtn.addEventListener('click', handleAddExerciseToWorkout);
+                DOMElements.workoutExercisesContainer.addEventListener('click', (e) => {
+                    if (e.target.closest('.remove-exercise-btn')) {
+                        e.target.closest('.exercise-entry').remove();
+                    }
+                });
+                
+                // *** REBUILT *** Consolidated event listener for all completion changes
+                DOMElements.plannerContainer.addEventListener('change', (e) => {
+                    const target = e.target;
+                    if (target.matches('.param-checkbox')) {
+                        const { scheduledId, paramIndex } = target.dataset;
+                        updateTaskCompletion(parseInt(scheduledId), parseInt(paramIndex), null, target.checked);
+                    } else if (target.matches('.set-completed-checkbox')) {
+                        const { scheduledId, exerciseIndex, setIndex } = target.dataset;
+                        updateTaskCompletion(parseInt(scheduledId), null, { exerciseIndex: parseInt(exerciseIndex), setIndex: parseInt(setIndex) }, target.checked);
+                    }
+                });
+
+                DOMElements.plannerContainer.addEventListener('click', (e) => {
+                    const button = e.target.closest('button[data-action]');
+                    if (button) {
+                        const { action, scheduledId, exerciseIndex, setIndex, nutritionId } = button.dataset;
+                        const sId = parseInt(scheduledId);
+
+                        switch (action) {
+                            case 'delete-scheduled':
+                                showConfirm('¿Eliminar esta actividad del día?', 'Esta acción no se puede deshacer.', () => {
+                                    deleteScheduledActivity(sId);
+                                });
+                                break;
+                            case 'add-set': 
+                                addWorkoutSet(sId, parseInt(exerciseIndex)); 
+                                break;
+                            case 'delete-set': 
+                                deleteWorkoutSet(sId, parseInt(exerciseIndex)); 
+                                break;
+                            case 'toggle-set-timer': 
+                                handleSetTimerAction(sId, parseInt(exerciseIndex), parseInt(setIndex), 'set'); 
+                                break;
+                            case 'toggle-rest-timer': 
+                                handleSetTimerAction(sId, parseInt(exerciseIndex), parseInt(setIndex), 'rest'); 
+                                break;
+                            case 'toggle-pomodoro': 
+                                handlePomodoroAction(sId, 'toggle'); 
+                                break;
+                            case 'skip-pomodoro': 
+                                handlePomodoroAction(sId, 'skip'); 
+                                break; 
+                            case 'reset-pomodoro': 
+                                handlePomodoroAction(sId, 'reset'); 
+                                break;
+                            case 'delete-nutrition':
+                                showConfirm('¿Eliminar este alimento?', '', () => {
+                                    deleteNutritionEntry(parseInt(nutritionId));
+                                });
+                                break;
+                        }
+                    }
+                });
+
+                // Listeners para Importar/Exportar
+                DOMElements.exportDataBtn.addEventListener('click', exportData);
+                DOMElements.importDataBtn.addEventListener('click', () => DOMElements.importFileInput.click());
+                DOMElements.importFileInput.addEventListener('change', importData);
+
+                // Listeners para Notepad
+                DOMElements.notepadToolbar.addEventListener('click', (e) => {
+                    const button = e.target.closest('button[data-command]');
+                    if (!button) return;
+                    const command = button.dataset.command;
+                    if (['bold', 'italic', 'highlight'].includes(command)){
+                        e.preventDefault();
+                        if (command === 'highlight') {
+                            document.execCommand('backColor', false, 'yellow');
+                        } else {
+                            document.execCommand(command, false, null);
+                        }
+                        DOMElements.notepadEditor.focus();
+                    }
+                });
+                DOMElements.notepadEditor.addEventListener('input', () => {
+                    state.notepadContent = DOMElements.notepadEditor.innerHTML;
+                    saveState();
+                });
+
+                // Listeners para Drag & Drop
+                let draggedItem = null;
+                DOMElements.plannerContainer.addEventListener('dragstart', (e) => {
+                    draggedItem = e.target.closest('.draggable-card');
+                    if (draggedItem) {
+                        setTimeout(() => {
+                            draggedItem.classList.add('dragging');
+                        }, 0);
+                    }
+                });
+
+                DOMElements.plannerContainer.addEventListener('dragend', () => {
+                    if (draggedItem) {
+                        draggedItem.classList.remove('dragging');
+                        draggedItem = null;
+                    }
+                });
+
+                DOMElements.plannerContainer.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    const container = DOMElements.plannerContainer.querySelector('.space-y-2');
+                    if (!container) return;
+
+                    const afterElement = getDragAfterElement(container, e.clientY);
+                    const currentlyDragging = document.querySelector('.dragging');
+                    if (currentlyDragging) {
+                        if (afterElement == null) {
+                            container.appendChild(currentlyDragging);
+                        } else {
+                            container.insertBefore(currentlyDragging, afterElement);
+                        }
+                    }
+                });
+
+                DOMElements.plannerContainer.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (!draggedItem) return;
+
+                    const dateKey = state.currentDate.format('YYYY-MM-DD');
+                    const scheduledActivities = state.scheduledActivities[dateKey];
+                    const reorderedIds = [...DOMElements.plannerContainer.querySelectorAll('.draggable-card')].map(card => parseInt(card.dataset.scheduledId));
+
+                    if(scheduledActivities) {
+                        scheduledActivities.sort((a, b) => {
+                            return reorderedIds.indexOf(a.id) - reorderedIds.indexOf(b.id);
+                        });
+                        saveState();
+                    }
+                });
+            }
+
+            function getDragAfterElement(container, y) {
+                const draggableElements = [...container.querySelectorAll('.draggable-card:not(.dragging)')];
+
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+            
+            function render(options = {}) {
+                const preserveOpenState = options.preserveOpenState || false;
+
+                const openDetailsIds = preserveOpenState
+                    ? [...DOMElements.plannerContainer.querySelectorAll('details[open]')]
+                        .map(d => d.dataset.scheduledId)
+                    : [];
+
+                renderActiveTab();
+                updateDateDisplay();
+                renderMasterActivityList();
+                updateChart();
+                
+                if (preserveOpenState && openDetailsIds.length > 0) {
+                    openDetailsIds.forEach(id => {
+                        const detail = DOMElements.plannerContainer.querySelector(`details[data-scheduled-id="${id}"]`);
+                        if (detail) {
+                            detail.open = true;
+                        }
+                    });
+                }
+
+                saveState();
+            }
+
+
+            // =================================================================
+            // PESTAÑAS Y LÓGICA DE UI
+            // =================================================================
+             function handleTabChange(e) {
+                const button = e.target.closest('.tab-btn');
+                if (!button) return;
+                state.activeTab = button.dataset.tab;
+                renderActiveTab();
+                saveState();
+            }
+
+            function handleCashflowFormSubmit(e) {
+                e.preventDefault();
+                const description = document.getElementById('transaction-description').value;
+                const amount = parseFloat(document.getElementById('transaction-amount').value);
+                const type = document.querySelector('input[name="transaction-type"]:checked').value;
+
+                if (!description || isNaN(amount) || amount <= 0) {
+                    showCustomAlert('Por favor, ingresa una descripción y un monto válido.');
+                    return;
+                }
+
+                state.cashFlowTransactions.push({
+                    id: Date.now(),
+                    date: state.currentDate.format('YYYY-MM-DD'),
+                    description,
+                    amount,
+                    type
+                });
+
+                DOMElements.cashflowForm.reset();
+                renderCashflow();
+                saveState();
+            }
+
+            function renderActiveTab() {
+                DOMElements.plannerWrapper.classList.toggle('hidden', state.activeTab !== 'planner');
+                DOMElements.progressWrapper.classList.toggle('hidden', state.activeTab !== 'progress');
+                DOMElements.notepadWrapper.classList.toggle('hidden', state.activeTab !== 'notepad');
+                DOMElements.cashflowWrapper.classList.toggle('hidden', state.activeTab !== 'cashflow');
+
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.tab === state.activeTab);
+                });
+
+                switch(state.activeTab) {
+                    case 'planner': renderPlannerView(); break;
+                    case 'progress': updateChart(); break;
+                    case 'notepad': renderNotepad(); break;
+                    case 'cashflow': renderCashflow(); break;
+                }
+            }
+
+            function renderPlannerView() {
+                const openDetailsIds = [...DOMElements.plannerContainer.querySelectorAll('details[open]')]
+                    .map(d => d.dataset.scheduledId);
+                
+                DOMElements.plannerContainer.innerHTML = '';
+                const isDailyView = state.currentView === 'daily';
+                DOMElements.addActivityDayButton.classList.toggle('hidden', !isDailyView);
+                
+                generateRecurringActivities(state.currentDate);
+                recalculateDailyPoints(state.currentDate.format('YYYY-MM-DD'));
+
+                switch (state.currentView) {
+                    case 'daily': renderDailyView(); break;
+                    case 'weekly': renderWeeklyView(); break;
+                    case 'monthly': renderMonthlyView(); break;
+                }
+                
+                openDetailsIds.forEach(id => {
+                    const detail = DOMElements.plannerContainer.querySelector(`details[data-scheduled-id="${id}"]`);
+                    if (detail) {
+                        detail.open = true;
+                    }
+                });
+            }
+
+            function renderDailyView() {
+                const dateKey = state.currentDate.format('YYYY-MM-DD');
+                const scheduled = [...(state.scheduledActivities[dateKey] || [])];
+
+                let html = '';
+                html += renderNutritionLog(dateKey);
+
+                const activitiesHtml = scheduled.map(item => {
+                    const activity = state.activities.find(a => a.id === item.activityId);
+                    if (!activity) return '';
+                    if (activity.type === 'workout') return renderWorkoutCard(item, activity);
+                    if (activity.type === 'pomodoro') return renderPomodoroCard(item, activity);
+                    return renderGenericActivityCard(item, activity);
+                }).join('');
+
+                html += `<div class="space-y-2">${activitiesHtml}</div>`;
+
+                if (html.replace(/<div class="space-y-2"><\/div>/g, '').trim() === '') {
+                     DOMElements.plannerContainer.innerHTML = `<div class="text-center py-16 text-gray-500">
+                                        <i class="fas fa-calendar-check text-4xl mb-4"></i><p class="font-semibold">No hay actividades.</p><p>¡Añade una para empezar!</p>
+                                      </div>`;
+                } else {
+                     DOMElements.plannerContainer.innerHTML = html;
+                }
+                updateChart();
+            }
+
+            function renderNotepad() {
+                DOMElements.notepadEditor.innerHTML = state.notepadContent;
+            }
+
+            function renderCashflow() {
+                const transactions = state.cashFlowTransactions;
+                let totalIncome = 0;
+                let totalExpense = 0;
+
+                transactions.forEach(t => {
+                    if (t.type === 'income') totalIncome += t.amount;
+                    else totalExpense += t.amount;
+                });
+
+                const balance = totalIncome - totalExpense;
+
+                document.getElementById('total-income').textContent = `$${totalIncome.toFixed(2)}`;
+                document.getElementById('total-expense').textContent = `$${totalExpense.toFixed(2)}`;
+                document.getElementById('current-balance').textContent = `$${balance.toFixed(2)}`;
+                document.getElementById('current-balance').className = `text-2xl font-bold ${balance >= 0 ? 'text-green-500' : 'text-red-500'}`;
+
+                const tableContainer = document.getElementById('cashflow-table-container');
+                if (transactions.length === 0) {
+                    tableContainer.innerHTML = `<p class="text-center text-gray-500">No hay transacciones.</p>`;
+                    return;
+                }
+
+                const tableHtml = `
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="p-2">Fecha</th>
+                                <th class="p-2">Descripción</th>
+                                <th class="p-2 text-right">Monto</th>
+                                <th class="p-2 text-right"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${transactions.slice().reverse().map(t => `
+                                <tr class="border-b dark:border-gray-700">
+                                    <td class="p-2">${dayjs(t.date).format('DD/MM/YY')}</td>
+                                    <td class="p-2">${t.description}</td>
+                                    <td class="p-2 text-right font-mono ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}">
+                                        ${t.type === 'income' ? '+' : '-'}$${t.amount.toFixed(2)}
+                                    </td>
+                                    <td class="p-2 text-right">
+                                        <button data-action="delete-transaction" data-transaction-id="${t.id}" class="text-gray-400 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                tableContainer.innerHTML = tableHtml;
+
+                tableContainer.querySelectorAll('[data-action="delete-transaction"]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const transactionId = parseInt(btn.dataset.transactionId);
+                        showConfirm('¿Eliminar transacción?', 'Esta acción no se puede deshacer.', () => {
+                            state.cashFlowTransactions = state.cashFlowTransactions.filter(t => t.id !== transactionId);
+                            renderCashflow();
+                            saveState();
+                        });
+                    });
+                });
+            }
+
+            // =================================================================
+            // WORKOUT & TIMER LOGIC
+            // =================================================================
+
+             function handleSetTimerAction(scheduledId, exerciseIndex, setIndex, type) {
+                const setTimerId = `set-${scheduledId}-${exerciseIndex}-${setIndex}`;
+                const restTimerId = `rest-${scheduledId}-${exerciseIndex}-${setIndex}`;
+                let timerId, otherTimerId, mode, duration;
+
+                if (type === 'set') {
+                    timerId = setTimerId;
+                    otherTimerId = restTimerId;
+                    mode = 'stopwatch';
+                } else { // rest
+                    timerId = restTimerId;
+                    otherTimerId = setTimerId;
+                    mode = 'countdown';
+                    duration = 180 * 1000; // 3 minutes
+                }
+
+                const otherTimer = timerManager.get(otherTimerId);
+                if (otherTimer && otherTimer.isRunning) {
+                    timerManager.pause(otherTimerId);
+                }
+
+                let timer = timerManager.get(timerId);
+                if (!timer) {
+                    timer = timerManager.create(timerId, { mode, duration });
+                }
+
+                if (timer.isRunning) timerManager.pause(timerId);
+                else timerManager.start(timerId);
+
+                render({ preserveOpenState: true });
+            }
+            
+            function renderWorkoutCard(item, activity) {
+                const category = CATEGORIES[activity.categoryId];
+                let timeDisplay = (item.startTime && item.startTime !== "00:00") ? `${item.startTime}${item.endTime && item.endTime !== "00:00" ? ' - ' + item.endTime : ''}` : 'Sin Hora';
+                const durationText = getDurationText(item.startTime, item.endTime);
+
+                const totalPointsPossible = (activity.workoutPlan.exercises || []).reduce((sum, ex) => sum + ((parseInt(ex.points) || 0) * (parseInt(ex.sets) || 0)), 0);
+
+                let earnedPoints = 0;
+                if (item.workoutProgress && activity.workoutPlan.exercises) {
+                    activity.workoutPlan.exercises.forEach((ex, exIndex) => {
+                        const progress = item.workoutProgress[exIndex];
+                        if(progress && progress.sets) {
+                            progress.sets.forEach(set => {
+                                if (set.completed) {
+                                    earnedPoints += parseInt(ex.points) || 0;
+                                }
+                            });
+                        }
+                    });
+                }
+
+
+                const exercisesHtml = activity.workoutPlan.exercises.map((ex, exIndex) => {
+                    if (!item.workoutProgress) item.workoutProgress = {};
+                    if (!item.workoutProgress[exIndex]) {
+                        item.workoutProgress[exIndex] = {
+                            sets: Array.from({length: parseInt(ex.sets)}, () => ({ reps: '', weight: '', rpe: '8', completed: false })),
+                            completed: false
+                        };
+                    } else if (!item.workoutProgress[exIndex].sets || item.workoutProgress[exIndex].sets.length !== parseInt(ex.sets)) {
+                         item.workoutProgress[exIndex].sets = Array.from({length: parseInt(ex.sets)}, (_, i) => item.workoutProgress[exIndex].sets[i] || ({ reps: '', weight: '', rpe: '8', completed: false }));
+                    }
+
+                    const currentProgress = item.workoutProgress[exIndex];
+
+                    const setsHtml = currentProgress.sets.map((progress, setIndex) => {
+                        const isCompleted = progress.completed;
+                        const isWarmUp = setIndex === 0 && currentProgress.sets.length > 1; 
+
+                        const setTimerId = `set-${item.id}-${exIndex}-${setIndex}`;
+                        const restTimerId = `rest-${item.id}-${exIndex}-${setIndex}`;
+                        const setTimer = timerManager.get(setTimerId);
+                        const restTimer = timerManager.get(restTimerId);
+
+                        const displayWeight = isCompleted ? progress.weight : (ex.weight || '');
+                        const displayReps = isCompleted ? progress.reps : ''; 
+                        const displayRpe = isCompleted ? progress.rpe : '8';
+
+                        return `
+                        <tr class="set-row ${isCompleted ? 'bg-green-50 dark:bg-green-900/50' : ''} ${isWarmUp ? 'warm-up-set dark:warm-up-set' : ''}"
+                            data-scheduled-id="${item.id}" data-exercise-index="${exIndex}" data-set-index="${setIndex}">
+                            <td class="p-2 text-center font-bold">${isWarmUp ? 'W' : setIndex + 1}</td>
+                            <td class="p-2"><input type="number" step="0.5" class="set-weight-input w-20 p-1 border rounded" placeholder="kg" value="${displayWeight}" ${isCompleted ? 'disabled' : ''}></td>
+                            <td class="p-2"><input type="number" class="set-reps-input w-20 p-1 border rounded" placeholder="${ex.reps || 'reps'}" value="${displayReps}" ${isCompleted ? 'disabled' : ''}></td>
+                            <td class="p-2"><input type="number" class="set-rpe-input w-16 p-1 border rounded" min="1" max="10" placeholder="1-10" value="${displayRpe}" ${isCompleted ? 'disabled' : ''}></td>
+                            <td class="p-2 text-center flex items-center justify-center gap-1 sm:gap-2">
+                                <button data-action="toggle-set-timer" data-scheduled-id="${item.id}" data-exercise-index="${exIndex}" data-set-index="${setIndex}"
+                                        class="w-8 h-8 rounded-full text-white ${setTimer?.isRunning ? 'bg-yellow-500' : 'bg-green-500'} ${isCompleted ? 'hidden' : 'flex-shrink-0'} items-center justify-center">
+                                    <i class="fas ${setTimer?.isRunning ? 'fa-pause' : 'fa-play'}"></i>
+                                </button>
+                                <span class="timer-display font-mono text-xs sm:text-sm w-10 sm:w-12 text-center" data-timer-id="${setTimerId}">${formatTime(isCompleted ? progress.setDuration : setTimer?.elapsed)}</span>
+                                <span class="text-gray-300 dark:text-gray-600 mx-1">|</span>
+                                <span class="timer-display font-mono text-xs sm:text-sm w-10 sm:w-12 text-center" data-timer-id="${restTimerId}">${formatTime(isCompleted ? progress.restDuration : restTimer?.elapsed)}</span>
+                                <button data-action="toggle-rest-timer" data-scheduled-id="${item.id}" data-exercise-index="${exIndex}" data-set-index="${setIndex}"
+                                        class="w-8 h-8 rounded-full text-white ${restTimer?.isRunning ? 'bg-yellow-500' : 'bg-blue-500'} ${isCompleted ? 'hidden' : 'flex-shrink-0'} items-center justify-center">
+                                    <i class="fas ${restTimer?.isRunning ? 'fa-pause' : 'fa-hourglass-half'}"></i>
+                                </button>
+                            </td>
+                            <td class="p-2 text-center">
+                                <input type="checkbox" class="set-completed-checkbox form-checkbox h-5 w-5 rounded text-${category.color}-500 focus:ring-${category.color}-400" data-scheduled-id="${item.id}" data-exercise-index="${exIndex}" data-set-index="${setIndex}" ${isCompleted ? 'checked' : ''}>
+                            </td>
+                        </tr>`;
+                    }).join('');
+
+                    const isExerciseCompleted = currentProgress.completed;
+
+                    return `
+                        <div class="mt-4 p-3 rounded ${isExerciseCompleted ? 'bg-green-100 dark:bg-green-900/50 border border-green-400' : 'bg-gray-100 dark:bg-gray-700'}">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-semibold text-base">${ex.name}
+                                    <span class="text-sm font-normal text-gray-500 dark:text-gray-400">(${ex.reps})</span>
+                                    ${ex.points > 0 ? `<span class="text-xs font-bold text-yellow-500 ml-1">(${ex.points} pts/serie)</span>` : ''}
+                                </h4>
+                                <div class="flex-shrink-0">
+                                    <button data-action="add-set" data-scheduled-id="${item.id}" data-exercise-index="${exIndex}" class="text-blue-500 hover:text-blue-700 text-xs font-bold px-1">+ SERIE</button>
+                                    <button data-action="delete-set" data-scheduled-id="${item.id}" data-exercise-index="${exIndex}" class="text-red-500 hover:text-red-700 text-xs font-bold px-1">- SERIE</button>
+                                </div>
+                            </div>
+                            ${ex.notes ? `<p class="text-xs text-gray-400 italic mb-2">${ex.notes}</p>` : ''}
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-200 dark:bg-gray-600">
+                                        <tr>
+                                            <th class="p-2 text-center w-10">Set</th>
+                                            <th class="p-2 text-left">Peso</th>
+                                            <th class="p-2 text-left">Reps</th>
+                                            <th class="p-2 text-left">RPE</th>
+                                            <th class="p-2 text-center min-w-[180px]">Tiempos (Set | Desc)</th>
+                                            <th class="p-2 text-center w-16">Hecho</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${setsHtml}</tbody>
+                                </table>
+                            </div>
+                        </div>`;
+                }).join('');
+
+
+                return `
+                <details class="draggable-card bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-4 border-${category.color}-400 mb-2" draggable="true" data-scheduled-id="${item.id}">
+                    <summary class="p-4 list-none">
+                         <div class="flex justify-between items-start">
+                             <div class="flex items-start">
+                                 <i class="fas fa-grip-vertical mr-3 mt-1 text-gray-300 dark:text-gray-600 cursor-grab"></i>
+                                 <div>
+                                     <p class="text-sm font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-1">${timeDisplay} ${durationText}</p>
+                                     <p class="font-bold text-lg leading-tight">${activity.name}</p>
+                                     <div class="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                         <i class="fas ${category.icon} mr-1 text-${category.color}-500"></i><span>${category.name}</span>
+                                         <span class="mx-2">|</span><span class="points-display flex items-center"><i class="fas fa-star mr-1 text-yellow-500"></i><span>${earnedPoints} / ${totalPointsPossible} pts</span></span>
+                                     </div>
+                                 </div>
+                             </div>
+                             <button data-action="delete-scheduled" data-scheduled-id="${item.id}" class="text-gray-400 hover:text-red-500 ml-2 flex-shrink-0"><i class="fas fa-trash-alt"></i></button>
+                         </div>
+                    </summary>
+                    <div class="content px-4 pb-4">
+                        <div class="mt-2 space-y-3">${exercisesHtml}</div>
+                    </div>
+                </details>`;
+            }
+
+
+            // =================================================================
+            // NUTRICIÓN
+            // =================================================================
+            function openNutritionModal() {
+                DOMElements.nutritionForm.reset();
+                document.getElementById('nutrition-id').value = '';
+                toggleModal('nutrition-modal', true);
+            }
+
+            function handleNutritionFormSubmit(e) {
+                e.preventDefault();
+                const dateKey = state.currentDate.format('YYYY-MM-DD');
+                if (!state.nutritionLog[dateKey]) {
+                    state.nutritionLog[dateKey] = [];
+                }
+
+                const entry = {
+                    id: Date.now(),
+                    mealType: document.getElementById('meal-type').value,
+                    name: document.getElementById('food-name').value.trim(),
+                    calories: parseFloat(document.getElementById('food-calories').value) || 0,
+                    protein: parseFloat(document.getElementById('food-protein').value) || 0,
+                    carbs: parseFloat(document.getElementById('food-carbs').value) || 0,
+                    fat: parseFloat(document.getElementById('food-fat').value) || 0,
+                    points: parseInt(document.getElementById('food-points').value) || 0,
+                };
+
+               if (!entry.name) {
+                   showCustomAlert('Por favor, ingresa el nombre del alimento.');
+                   return;
+               }
+
+                state.nutritionLog[dateKey].push(entry);
+                toggleModal('nutrition-modal', false);
+                render({ preserveOpenState: true });
+            }
+
+            function deleteNutritionEntry(id) {
+                const dateKey = state.currentDate.format('YYYY-MM-DD');
+                if (state.nutritionLog[dateKey]) {
+                    state.nutritionLog[dateKey] = state.nutritionLog[dateKey].filter(entry => entry.id !== id);
+                    render({ preserveOpenState: true });
+                }
+            }
+
+            function renderNutritionLog(dateKey) {
+                const entries = state.nutritionLog[dateKey] || [];
+                if (entries.length === 0) return '';
+
+                const meals = { Desayuno: [], Almuerzo: [], Cena: [], Snacks: [] };
+                const totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+                const mealIcons = {
+                    Desayuno: 'fa-mug-saucer',
+                    Almuerzo: 'fa-drumstick-bite',
+                    Cena: 'fa-plate-wheat',
+                    Snacks: 'fa-apple-whole'
+                };
+
+                entries.forEach(entry => {
+                    if (meals[entry.mealType]) meals[entry.mealType].push(entry);
+                    totals.calories += entry.calories || 0;
+                    totals.protein += entry.protein || 0;
+                    totals.carbs += entry.carbs || 0;
+                    totals.fat += entry.fat || 0;
+                });
+
+                const mealHtml = Object.keys(meals).map(mealType => {
+                    const mealEntries = meals[mealType];
+                    if (mealEntries.length === 0) return '';
+
+                    const mealTotals = mealEntries.reduce((acc, curr) => {
+                        acc.calories += curr.calories || 0;
+                        acc.protein += curr.protein || 0;
+                        acc.carbs += curr.carbs || 0;
+                        acc.fat += curr.fat || 0;
+                        return acc;
+                    }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+                    const entriesHtml = mealEntries.map(entry => `
+                        <li class="flex justify-between items-center text-sm py-1 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                            <span class="flex-grow mr-2">${entry.name} ${entry.points > 0 ? `<span class="text-xs font-bold text-yellow-500">(${entry.points} pts)</span>` : ''}</span>
+                            <span class="font-mono text-xs w-auto text-right text-gray-500 dark:text-gray-400 flex-shrink-0">
+                                ${entry.calories.toFixed(0)}k / ${entry.protein.toFixed(0)}p / ${entry.carbs.toFixed(0)}c / ${entry.fat.toFixed(0)}f
+                            </span>
+                             <button data-action="delete-nutrition" data-nutrition-id="${entry.id}" class="ml-2 text-gray-400 hover:text-red-500 text-xs flex-shrink-0"><i class="fas fa-times"></i></button>
+                        </li>
+                    `).join('');
+
+                    return `
+                        <div class="mb-3">
+                            <h4 class="font-semibold text-sm mb-1 flex items-center gap-2"><i class="fas ${mealIcons[mealType]} w-4 text-center text-yellow-600"></i>${mealType}</h4>
+                            <ul class="">${entriesHtml}</ul>
+                            <div class="text-right text-xs font-semibold mt-1 text-blue-600 dark:text-blue-400">
+                                Subtotal: ${mealTotals.calories.toFixed(0)}kcal | P:${mealTotals.protein.toFixed(0)}g | C:${mealTotals.carbs.toFixed(0)}g | F:${mealTotals.fat.toFixed(0)}g
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                <div class="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-4 border-yellow-400">
+                    <h3 class="font-bold text-lg mb-3">Bitácora Nutricional</h3>
+                    <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center nutrition-summary-grid p-2 rounded-lg mb-3 bg-gray-100 dark:bg-gray-800">
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Calorías</p>
+                                <p class="font-bold text-base">${totals.calories.toFixed(0)}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Proteínas</p>
+                                <p class="font-bold text-base">${totals.protein.toFixed(0)}g</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Carbs</p>
+                                <p class="font-bold text-base">${totals.carbs.toFixed(0)}g</p>
+                            </div>
+                             <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Grasas</p>
+                                <p class="font-bold text-base">${totals.fat.toFixed(0)}g</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2">${mealHtml}</div>
+                    </div>
+                </div>
+                `;
+            }
+
+
+            // =================================================================
+            // FUNCIONES GENERALES Y DE ACTIVIDADES
+            // =================================================================
+
+             function addWorkoutSet(scheduledId, exerciseIndex) {
+                const dateKey = state.currentDate.format('YYYY-MM-DD');
+                const item = state.scheduledActivities[dateKey]?.find(i => i.id === scheduledId);
+                if (!item || !item.workoutProgress || !item.workoutProgress[exerciseIndex]) return;
+
+                item.workoutProgress[exerciseIndex].sets.push({ reps: '', weight: '', rpe: '8', completed: false });
+                item.workoutProgress[exerciseIndex].completed = false; // Adding a set means the exercise is no longer complete
+                render({ preserveOpenState: true });
+                saveState();
+            }
+
+            function deleteWorkoutSet(scheduledId, exerciseIndex) {
+                const dateKey = state.currentDate.format('YYYY-MM-DD');
+                const item = state.scheduledActivities[dateKey]?.find(i => i.id === scheduledId);
+                if (!item || !item.workoutProgress || !item.workoutProgress[exerciseIndex]) return;
+
+                if (item.workoutProgress[exerciseIndex].sets.length > 0) {
+                    const setToRemoveIndex = item.workoutProgress[exerciseIndex].sets.length - 1;
+                    timerManager.stop(`set-${scheduledId}-${exerciseIndex}-${setToRemoveIndex}`);
+                    timerManager.stop(`rest-${scheduledId}-${exerciseIndex}-${setToRemoveIndex}`);
+                    
+                    item.workoutProgress[exerciseIndex].sets.pop();
+                    const allSetsCompleted = item.workoutProgress[exerciseIndex].sets.length > 0 && item.workoutProgress[exerciseIndex].sets.every(s => s.completed);
+                    item.workoutProgress[exerciseIndex].completed = allSetsCompleted;
+                    render({ preserveOpenState: true });
+                }
+            }
+
+
+            function renderWeeklyView() {
+                const startOfWeek = state.currentDate.startOf('week');
+                for (let i = 0; i < 7; i++) {
+                    const day = startOfWeek.add(i, 'day');
+                    generateRecurringActivities(day);
+                    recalculateDailyPoints(day.format('YYYY-MM-DD'));
+                }
+
+                let html = `<div class="grid grid-cols-7 gap-1 text-center text-xs sm:text-sm">`;
+                for (let i = 0; i < 7; i++) {
+                     const dayHeader = startOfWeek.add(i, 'day');
+                     const isTodayHeader = dayHeader.isSame(dayjs(), 'day');
+                     html += `<div class="font-semibold p-2 ${isTodayHeader ? 'text-blue-600 dark:text-blue-400' : ''}">${dayHeader.format('ddd')}</div>`;
+                }
+                for (let i = 0; i < 7; i++) {
+                    const day = startOfWeek.add(i, 'day');
+                    const dateKey = day.format('YYYY-MM-DD');
+                    const scheduled = state.scheduledActivities[dateKey] || [];
+                    const points = Object.values(state.pointsLog[dateKey] || {}).reduce((a, b) => a + b, 0);
+                    const isToday = day.isSame(dayjs(), 'day');
+                    html += `<div class="border dark:border-gray-700 rounded-lg p-1 min-h-[100px] sm:min-h-[120px] ${isToday ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-gray-800'} relative">
+                                <div class="font-semibold text-sm sm:text-base mb-1 ${isToday ? 'text-blue-600 dark:text-blue-400' : ''}">${day.format('D')}</div>
+                                <div class="text-xs space-y-1 overflow-hidden max-h-[70px] sm:max-h-[80px]">
+                                ${scheduled.map(item => {
+                                    const activity = state.activities.find(a => a.id === item.activityId);
+                                    if (!activity) return '';
+                                    const category = CATEGORIES[activity.categoryId];
+                                    const isCompleted = isActivityCompleted(item, activity);
+                                    return `<div class="p-1 rounded text-[10px] sm:text-xs truncate ${isCompleted ? `bg-${category.color}-200 dark:bg-${category.color}-700/50` : `bg-${category.color}-100 dark:bg-${category.color}-900/30`} text-${category.color}-800 dark:text-${category.color}-300">${activity.name}</div>`;
+                                }).join('')}
+                                </div>
+                                ${points > 0 ? `<div class="absolute bottom-1 right-1 text-[10px] sm:text-xs font-bold text-yellow-600 dark:text-yellow-400"><i class="fas fa-star text-yellow-500"></i> ${points}</div>` : ''}
+                                </div>`;
+                }
+                html += `</div>`;
+                DOMElements.plannerContainer.innerHTML = html;
+                updateChart();
+            }
+
+             function isActivityCompleted(scheduledItem, activity) {
+                if (!activity) return false;
+                if (activity.type === 'workout') {
+                    if (!scheduledItem.workoutProgress || (activity.workoutPlan?.exercises || []).length === 0) return false;
+                    return activity.workoutPlan.exercises.every((ex, index) => scheduledItem.workoutProgress[index]?.completed);
+                } else if (activity.type === 'pomodoro' || activity.type === 'generic') {
+                    if (!activity.params || activity.params.length === 0) return true; // No params means instantly complete
+                    if (!scheduledItem.paramStatus || scheduledItem.paramStatus.length !== activity.params.length) return false;
+                    return scheduledItem.paramStatus.every(status => status === true);
+                }
+                return false;
+            }
+
+
+            function renderMonthlyView() {
+                const startOfMonth = state.currentDate.startOf('month');
+                const endOfMonth = state.currentDate.endOf('month');
+                let currentDay = startOfMonth;
+                while(currentDay.isBefore(endOfMonth) || currentDay.isSame(endOfMonth, 'day')) {
+                    generateRecurringActivities(currentDay);
+                    recalculateDailyPoints(currentDay.format('YYYY-MM-DD'));
+                    currentDay = currentDay.add(1, 'day');
+                }
+
+
+                const startDayOffset = startOfMonth.weekday();
+                const daysInMonth = endOfMonth.date();
+
+                let html = `<div class="grid grid-cols-7 gap-1 text-center">`;
+                dayjs.weekdaysShort(true).forEach(day => {
+                    html += `<div class="font-semibold p-1 text-xs text-gray-500 dark:text-gray-400">${day}</div>`;
+                });
+
+                for (let i = 0; i < startDayOffset; i++) {
+                    html += `<div class="border dark:border-gray-700 rounded h-16 sm:h-20 bg-gray-50 dark:bg-gray-800/50"></div>`;
+                }
+
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const day = startOfMonth.date(i);
+                    const dateKey = day.format('YYYY-MM-DD');
+                    const points = Object.values(state.pointsLog[dateKey] || {}).reduce((a, b) => a + b, 0);
+                    const isToday = day.isSame(dayjs(), 'day');
+                    const scheduledCount = (state.scheduledActivities[dateKey] || []).length;
+
+                    let pointIndicatorStyle = '';
+                    if (points > 0) {
+                        const intensity = Math.min(1, 0.1 + points / 50).toFixed(2);
+                        pointIndicatorStyle = `style="background-color: rgba(34, 197, 94, ${intensity});"`;
+                    }
+
+                    html += `<div class="relative border dark:border-gray-700 rounded h-16 sm:h-20 ${isToday ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-white dark:bg-gray-800'} overflow-hidden">
+                                 <div class="absolute inset-0 ${points > 0 ? '' : 'hidden'}" ${pointIndicatorStyle}></div>
+                                 <div class="relative z-10 p-1 text-left">
+                                     <div class="text-xs sm:text-sm font-semibold ${isToday ? 'text-blue-700 dark:text-blue-300' : ''}">${i}</div>
+                                     ${scheduledCount > 0 ? `<div class="absolute bottom-1 right-1 text-[9px] sm:text-[10px] bg-gray-200 dark:bg-gray-600 rounded-full w-4 h-4 flex items-center justify-center font-semibold">${scheduledCount}</div>` : ''}
+                                     ${points > 0 && scheduledCount === 0 ? `<div class="absolute bottom-1 right-1 text-[9px] sm:text-[10px] font-bold text-yellow-600 dark:text-yellow-400"><i class="fas fa-star text-[8px] sm:text-[9px]"></i>${points}</div>` : ''}
+
+                                 </div>
+                                 </div>`;
+                }
+                 const totalCells = startDayOffset + daysInMonth;
+                 const remainingCells = (7 - (totalCells % 7)) % 7;
+                 for (let i = 0; i < remainingCells; i++) {
+                      html += `<div class="border dark:border-gray-700 rounded h-16 sm:h-20 bg-gray-50 dark:bg-gray-800/50"></div>`;
+                 }
+
+                html += '</div>';
+                DOMElements.plannerContainer.innerHTML = html;
+                updateChart();
+            }
+
+
+            function renderMasterActivityList() {
+                const activitiesByCategory = state.activities.reduce((acc, activity) => {
+                    const categoryId = activity.categoryId || 'uncategorized';
+                    if (!acc[categoryId]) {
+                         acc[categoryId] = [];
+                    }
+                    acc[categoryId].push(activity);
+                    return acc;
+                }, {});
+
+                const categoryOrder = Object.keys(CATEGORIES);
+                if(activitiesByCategory['uncategorized']) {
+                    categoryOrder.push('uncategorized');
+                }
+
+
+                let html = categoryOrder.map(categoryId => {
+                    if (!activitiesByCategory[categoryId] || activitiesByCategory[categoryId].length === 0) return '';
+
+                    const category = CATEGORIES[categoryId] || { name: 'Sin Categoría', color: 'gray', icon: 'fa-question-circle' };
+
+                    const activitiesHtml = activitiesByCategory[categoryId].map(activity => {
+                        const icon = activity.type === 'workout' ? 'fa-dumbbell' : 'fa-pencil-alt';
+                        return `
+                            <div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded-md shadow-sm">
+                                <span class="font-medium text-sm truncate pr-2">${activity.name}</span>
+                                <button class="edit-master-activity-btn text-gray-400 hover:text-blue-600 dark:hover:text-cyan-400 flex-shrink-0" data-id="${activity.id}">
+                                    <i class="fas ${icon}"></i>
+                                </button>
+                            </div>`;
+                    }).join('');
+
+                    return `
+                        <div class="mb-4">
+                            <h4 class="font-bold text-base mb-2 flex items-center text-${category.color}-600 dark:text-${category.color}-400">
+                                <i class="fas ${category.icon} mr-2 w-4 text-center"></i>${category.name}
+                            </h4>
+                            <div class="space-y-1.5">${activitiesHtml}</div>
+                        </div>`;
+                }).join('');
+
+                DOMElements.masterActivityList.innerHTML = html || '<p class="text-gray-500 dark:text-gray-400">No hay actividades creadas.</p>';
+            }
+
+
+            function updateDateDisplay() {
+                let text = '';
+                if (state.currentView === 'daily') text = state.currentDate.format('dddd, D [de] MMMM');
+                else if (state.currentView === 'weekly') text = `${state.currentDate.startOf('week').format('D MMM')} - ${state.currentDate.endOf('week').format('D MMM, YYYY')}`;
+                else text = state.currentDate.format('MMMM YYYY');
+                DOMElements.currentDateDisplay.textContent = text;
+            }
+
+            function handleViewChange(e) {
+                if (!e.target.matches('.view-btn')) return;
+                document.querySelectorAll('.view-btn').forEach(btn => {
+                    btn.classList.remove('bg-white', 'text-blue-600', 'shadow', 'dark:bg-cyan-500', 'dark:text-gray-900');
+                    btn.classList.add('text-gray-600', 'dark:text-gray-300');
+                });
+                e.target.classList.add('bg-white', 'text-blue-600', 'shadow', 'dark:bg-cyan-500', 'dark:text-gray-900');
+                e.target.classList.remove('text-gray-600', 'dark:text-gray-300');
+                state.currentView = e.target.dataset.view;
+                render();
+            }
+
+            function handleChartTypeChange(e) {
+                const button = e.target.closest('.chart-btn');
+                if (!button) return;
+                state.chartType = button.dataset.chart;
+
+                document.querySelectorAll('#chart-type-selector .chart-btn').forEach(btn => {
+                     const isActive = btn === button;
+                     btn.classList.toggle('active', isActive);
+                     if(isActive) {
+                         btn.classList.add('bg-white', 'text-blue-600', 'shadow', 'dark:bg-cyan-500', 'dark:text-gray-900');
+                         btn.classList.remove('text-gray-600', 'dark:text-gray-300');
+                     } else {
+                         btn.classList.remove('bg-white', 'text-blue-600', 'shadow', 'dark:bg-cyan-500', 'dark:text-gray-900');
+                         btn.classList.add('text-gray-600', 'dark:text-gray-300');
+                     }
+                });
+                updateChart();
+                saveState();
+            }
+
+
+            function navigateDate(direction) {
+                const unit = state.currentView === 'daily' ? 'day' : state.currentView === 'weekly' ? 'week' : 'month';
+                state.currentDate = state.currentDate.add(direction, unit);
+                render();
+            }
+
+            function getChartColor(colorName) {
+                const colorMap = {
+                    blue: '#3B82F6', green: '#22C55E', indigo: '#6366F1',
+                    yellow: '#EAB308', purple: '#A855F7', pink: '#EC4899', gray: '#6B7280'
+                };
+                const darkColorMap = {
+                    blue: '#60A5FA', green: '#4ADE80', indigo: '#818CF8',
+                    yellow: '#FACC15', purple: '#C084FC', pink: '#F472B6', gray: '#9CA3AF'
+                };
+                return state.theme === 'dark' ? (darkColorMap[colorName] || '#9CA3AF') : (colorMap[colorName] || '#6B7280');
+            }
+
+            function updateChart() {
+                const isDark = state.theme === 'dark';
+                const gridColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)';
+                const textColor = isDark ? '#CCCCCC' : '#555555';
+
+                const baseChartOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: textColor, boxWidth: 12, padding: 10 } },
+                        tooltip: {
+                            backgroundColor: isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                            titleColor: isDark ? '#FFFFFF' : '#333333',
+                            bodyColor: textColor,
+                            borderColor: gridColor,
+                            borderWidth: 1
+                        }
+                    }
+                };
+
+                const isDailyView = state.chartType === 'daily';
+                DOMElements.progressLineChartContainer.style.display = isDailyView ? 'block' : 'none';
+                DOMElements.progressChartCanvas.style.display = 'block';
+
+                if (progressChart && (isDailyView && progressChart.config.type !== 'radar') || (!isDailyView && progressChart.config.type !== 'line')) {
+                    progressChart.destroy();
+                    progressChart = null;
+                }
+
+                if (!isDailyView && progressLineChart) {
+                    progressLineChart.destroy();
+                    progressLineChart = null;
+                }
+
+                if (state.chartType === 'daily') {
+                    renderDailyRadarChart(baseChartOptions, gridColor, textColor);
+                    renderDailyLineChart(baseChartOptions, gridColor, textColor);
+                } else if (state.chartType === 'weekly') {
+                    renderWeeklyLineChart(baseChartOptions, gridColor, textColor);
+                } else { // monthly
+                    renderMonthlyLineChart(baseChartOptions, gridColor, textColor);
+                }
+            }
+
+            function renderDailyRadarChart(baseOptions, gridColor, textColor) {
+                const dateKey = state.currentDate.format('YYYY-MM-DD');
+                const dailyPoints = state.pointsLog[dateKey] || {};
+                const labels = Object.values(CATEGORIES).map(c => c.name);
+                const data = Object.keys(CATEGORIES).map(catId => dailyPoints[catId] || 0);
+                const hasData = data.some(d => d > 0);
+
+                const chartData = {
+                    labels,
+                    datasets: [{
+                        label: `Puntos ${state.currentDate.format('D MMM')}`,
+                        data: data,
+                        backgroundColor: getChartColor('blue') + '40',
+                        borderColor: getChartColor('blue'),
+                        pointBackgroundColor: getChartColor('blue')
+                    }]
+                };
+
+                const chartOptions = {
+                    ...baseOptions,
+                    scales: {
+                        r: {
+                            angleLines: { color: gridColor },
+                            grid: { color: gridColor },
+                            pointLabels: { color: textColor, font: { size: 10 } },
+                            ticks: {
+                                color: textColor,
+                                backdropColor: state.theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
+                                stepSize: hasData ? undefined : 5,
+                            },
+                            beginAtZero: true,
+                            suggestedMax: hasData ? Math.max(...data) + 5 : 20
+                        }
+                    },
+                    plugins: { ...baseOptions.plugins, legend: { display: false } }
+                };
+                
+                if (!progressChart) {
+                    const ctx = DOMElements.progressChartCanvas.getContext('2d');
+                    progressChart = new Chart(ctx, { type: 'radar', data: chartData, options: chartOptions });
+                } else {
+                    progressChart.data = chartData;
+                    progressChart.options = chartOptions;
+                    progressChart.update();
+                }
+            }
+
+            function renderDailyLineChart(baseOptions, gridColor, textColor) {
+                const last7Days = Array.from({ length: 7 }, (_, i) => state.currentDate.subtract(6 - i, 'day'));
+                const labels = last7Days.map(day => day.format('ddd D'));
+                const data = last7Days.map(day => {
+                    const dateKey = day.format('YYYY-MM-DD');
+                    const dailyPoints = state.pointsLog[dateKey] || {};
+                    return Object.values(dailyPoints).reduce((a, b) => a + b, 0);
+                });
+
+                const chartData = {
+                    labels,
+                    datasets: [{
+                        label: 'Puntos últimos 7 días',
+                        data,
+                        borderColor: getChartColor('purple'),
+                        backgroundColor: getChartColor('purple') + '30',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                };
+
+                const chartOptions = {
+                    ...baseOptions,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                        x: { grid: { display: false }, ticks: { color: textColor } }
+                    },
+                    plugins: { ...baseOptions.plugins, legend: { display: false } }
+                };
+
+                if (!progressLineChart) {
+                    const ctx = DOMElements.progressLineChartCanvas.getContext('2d');
+                    progressLineChart = new Chart(ctx, { type: 'line', data: chartData, options: chartOptions });
+                } else {
+                    progressLineChart.data = chartData;
+                    progressLineChart.options = chartOptions;
+                    progressLineChart.update();
+                }
+            }
+            
+            function renderWeeklyLineChart(baseOptions, gridColor, textColor) {
+                const startOfWeek = state.currentDate.startOf('week');
+                const labels = Array.from({ length: 7 }, (_, i) => startOfWeek.add(i, 'day').format('ddd D'));
+                
+                const datasets = Object.keys(CATEGORIES).map(catId => {
+                    const category = CATEGORIES[catId];
+                    const data = labels.map((_, i) => {
+                        const day = startOfWeek.add(i, 'day');
+                        const dateKey = day.format('YYYY-MM-DD');
+                        return state.pointsLog[dateKey]?.[catId] || 0;
+                    });
+                    return {
+                        label: category.name,
+                        data,
+                        borderColor: getChartColor(category.color),
+                        tension: 0.1,
+                        fill: false
+                    };
+                });
+                
+                const chartData = { labels, datasets };
+                
+                const chartOptions = {
+                    ...baseOptions,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                        x: { grid: { display: false }, ticks: { color: textColor } }
+                    },
+                };
+                
+                if (!progressChart) {
+                    const ctx = DOMElements.progressChartCanvas.getContext('2d');
+                    progressChart = new Chart(ctx, { type: 'line', data: chartData, options: chartOptions });
+                } else {
+                    progressChart.data = chartData;
+                    progressChart.options = chartOptions;
+                    progressChart.update();
+                }
+            }
+            
+            function renderMonthlyLineChart(baseOptions, gridColor, textColor) {
+                const startOfMonth = state.currentDate.startOf('month');
+                const weekCount = Math.ceil((startOfMonth.daysInMonth() + startOfMonth.day()) / 7);
+                const labels = Array.from({ length: weekCount }, (_, i) => `Sem ${i + 1}`);
+                
+                const datasets = Object.keys(CATEGORIES).map(catId => {
+                    const category = CATEGORIES[catId];
+                    const data = labels.map((_, i) => {
+                        const weekStart = startOfMonth.add(i, 'week').startOf('week');
+                        let weeklyTotal = 0;
+                        for (let d = 0; d < 7; d++) {
+                            const day = weekStart.add(d, 'day');
+                            if (day.month() === startOfMonth.month()) {
+                                const dateKey = day.format('YYYY-MM-DD');
+                                weeklyTotal += state.pointsLog[dateKey]?.[catId] || 0;
+                            }
+                        }
+                        return weeklyTotal;
+                    });
+                    return {
+                        label: category.name,
+                        data,
+                        borderColor: getChartColor(category.color),
+                        tension: 0.1,
+                        fill: false
+                    };
+                });
+                
+                const chartData = { labels, datasets };
+                
+                const chartOptions = {
+                    ...baseOptions,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                        x: { grid: { display: false }, ticks: { color: textColor } }
+                    },
+                };
+                
+                if (!progressChart) {
+                    const ctx = DOMElements.progressChartCanvas.getContext('2d');
+                    progressChart = new Chart(ctx, { type: 'line', data: chartData, options: chartOptions });
+                } else {
+                    progressChart.data = chartData;
+                    progressChart.options = chartOptions;
+                    progressChart.update();
+                }
+            }
+
+
+            function toggleModal(modalId, show) { document.getElementById(modalId).classList.toggle('hidden', !show); }
+            function populateCategorySelect() { DOMElements.activityCategorySelect.innerHTML = Object.keys(CATEGORIES).map(key => `<option value="${key}">${CATEGORIES[key].name}</option>`).join(''); }
+            function closeActivityModal() { toggleModal('activity-modal', false); }
+            
+            function openActivityModal(id = null) {
+                DOMElements.activityForm.reset();
+                DOMElements.parametersContainer.innerHTML = '';
+                DOMElements.deleteActivityBtn.classList.add('hidden');
+                DOMElements.activityIdInput.value = '';
+                if (id) {
+                    const activity = state.activities.find(a => a.id === id);
+                    if (!activity || activity.type === 'workout') return;
+                    DOMElements.modalTitle.textContent = 'Editar Actividad';
+                    DOMElements.activityIdInput.value = activity.id;
+                    DOMElements.activityNameInput.value = activity.name;
+                    DOMElements.activityCategorySelect.value = activity.categoryId;
+                    DOMElements.activityTypeSelect.value = activity.type || 'generic';
+                    (activity.params || []).forEach(p => addParameterInput(p));
+                    DOMElements.deleteActivityBtn.classList.remove('hidden');
+                } else {
+                    DOMElements.modalTitle.textContent = 'Crear Actividad';
+                    addParameterInput(); 
+                }
+                toggleModal('activity-modal', true);
+            }
+
+            function addParameterInput(param = { name: '', value: '', points: 5 }) {
+                const div = document.createElement('div');
+                div.className = 'flex items-center space-x-2 parameter-row';
+                div.innerHTML = `
+                    <input type="text" placeholder="Nombre (ej. Paso 1)" value="${param.name || ''}" class="param-name flex-grow border-gray-300 rounded-lg shadow-sm text-sm p-2">
+                    <input type="text" placeholder="Valor (ej. 3 min)" value="${param.value || ''}" class="param-value w-1/4 border-gray-300 rounded-lg shadow-sm text-sm p-2">
+                    <input type="number" placeholder="Pts" value="${param.points || 0}" min="0" class="param-points w-16 border-gray-300 rounded-lg shadow-sm text-sm p-2 text-center">
+                    <button type="button" class="remove-parameter-btn text-red-500 hover:text-red-700 p-1 flex-shrink-0"><i class="fas fa-trash"></i></button>`;
+                div.querySelector('.remove-parameter-btn').addEventListener('click', () => div.remove());
+                DOMElements.parametersContainer.appendChild(div);
+            }
+
+            function handleFormSubmit(e) {
+                e.preventDefault();
+                const id = parseInt(DOMElements.activityIdInput.value);
+                const name = DOMElements.activityNameInput.value.trim();
+                if (!name) {
+                     showCustomAlert("El nombre de la actividad no puede estar vacío.");
+                     return;
+                }
+                const params = Array.from(document.querySelectorAll('.parameter-row')).map(row => ({
+                    name: row.querySelector('.param-name').value.trim(),
+                    value: row.querySelector('.param-value').value.trim(),
+                    points: parseInt(row.querySelector('.param-points').value) || 0
+                })).filter(p => p.name); // Only save params with a name
+
+                const activityData = {
+                    type: DOMElements.activityTypeSelect.value,
+                    name: name,
+                    categoryId: DOMElements.activityCategorySelect.value,
+                    params
+                };
+                if (id) {
+                    const index = state.activities.findIndex(a => a.id === id);
+                    if (index > -1) {
+                         state.activities[index] = { ...state.activities[index], ...activityData };
+                         // Update scheduled activities if params changed
+                         Object.keys(state.scheduledActivities).forEach(dateKey => {
+                             state.scheduledActivities[dateKey].forEach(item => {
+                                 if(item.activityId === id && item.paramStatus?.length !== params.length) {
+                                     item.paramStatus = Array(params.length).fill(false);
+                                 }
+                             });
+                         });
+                    }
+                } else {
+                    state.activities.push({ id: Date.now(), ...activityData });
+                }
+                closeActivityModal();
+                render(); // Re-render everything
+            }
+            
+            function deleteActivity(activityId) {
+                if (!activityId) return;
+
+                state.activities = state.activities.filter(a => a.id !== activityId);
+
+                Object.keys(state.scheduledActivities).forEach(dateKey => {
+                    state.scheduledActivities[dateKey] = state.scheduledActivities[dateKey].filter(item => {
+                        if (item.activityId === activityId) {
+                            timerManager.stop(`pomodoro-${item.id}`);
+                            if (item.workoutProgress) {
+                                Object.keys(item.workoutProgress).forEach(exIndex => {
+                                    item.workoutProgress[exIndex].sets.forEach((s, setIndex) => {
+                                        timerManager.stop(`set-${item.id}-${exIndex}-${setIndex}`);
+                                        timerManager.stop(`rest-${item.id}-${exIndex}-${setIndex}`);
+                                    });
+                                });
+                            }
+                            return false;
+                        }
+                        return true;
+                    });
+                    if (state.scheduledActivities[dateKey].length === 0) {
+                        delete state.scheduledActivities[dateKey];
+                    }
+                });
+
+                closeActivityModal();
+                toggleModal('workout-modal', false); 
+                render(); 
+            }
+
+            function openAddActivityToDayModal() {
+                DOMElements.addToDayForm.reset();
+                document.querySelectorAll('#recurrence-days input').forEach(chk => chk.checked = false);
+
+                const sortedActivities = [...state.activities].sort((a, b) => a.name.localeCompare(b.name));
+
+                DOMElements.dayActivitySelect.innerHTML = sortedActivities
+                    .map(a => `<option value="${a.id}">${a.name}${a.type === 'workout' ? ' (Rutina)' : ''}</option>`)
+                    .join('');
+
+                document.getElementById('recurrence-section').style.display = state.activities.length > 0 ? 'block' : 'none';
+
+                toggleModal('add-to-day-modal', true);
+            }
+
+
+            function handleAddActivityToDay(e) {
+                e.preventDefault();
+                const activityId = parseInt(DOMElements.dayActivitySelect.value);
+                const activity = state.activities.find(a => a.id === activityId);
+                if (!activity) return;
+
+                const startTimeInput = document.getElementById('day-activity-start-time');
+                const endTimeInput = document.getElementById('day-activity-end-time');
+                const startTime = startTimeInput.value || "00:00";
+                const endTime = endTimeInput.value || "00:00";
+
+                if (startTime !== "00:00" && endTime !== "00:00" && endTime <= startTime) {
+                     showCustomAlert("La hora de término no puede ser anterior o igual a la hora de inicio.");
+                     endTimeInput.focus();
+                     return;
+                }
+
+                const recurringDays = [...document.querySelectorAll('#recurrence-days input:checked')].map(chk => parseInt(chk.value));
+                const dateKey = state.currentDate.format('YYYY-MM-DD');
+
+                if (recurringDays.length > 0) {
+                    activity.recurring = { days: recurringDays };
+                    if (recurringDays.includes(state.currentDate.day())) {
+                         addScheduledActivity(dateKey, activity, startTime, endTime);
+                    }
+                } else {
+                    delete activity.recurring;
+                    addScheduledActivity(dateKey, activity, startTime, endTime);
+                }
+
+                toggleModal('add-to-day-modal', false);
+                render();
+            }
+
+
+            function generateRecurringActivities(date) {
+                if(!date) return;
+                const dateKey = date.format('YYYY-MM-DD');
+                const dayOfWeek = date.day();
+
+                if (!state.scheduledActivities[dateKey]) {
+                    state.scheduledActivities[dateKey] = [];
+                }
+
+                state.activities.forEach(activity => {
+                    if (activity.recurring && activity.recurring.days.includes(dayOfWeek)) {
+                        const alreadyScheduled = state.scheduledActivities[dateKey].some(item => item.activityId === activity.id);
+                        if (!alreadyScheduled) {
+                            addScheduledActivity(dateKey, activity, "00:00", "00:00");
+                        }
+                    }
+                });
+            }
+
+            function addScheduledActivity(dateKey, activity, startTime, endTime) {
+                if (!state.scheduledActivities[dateKey]) {
+                    state.scheduledActivities[dateKey] = [];
+                }
+                if(state.scheduledActivities[dateKey].some(item => item.activityId === activity.id)) {
+                     return; 
+                }
+
+                const newScheduledActivity = {
+                    id: Date.now() + Math.random(),
+                    activityId: activity.id,
+                    startTime: startTime || "00:00",
+                    endTime: endTime || "00:00"
+                };
+
+                if (activity.type === 'workout') {
+                    newScheduledActivity.workoutProgress = {};
+                    (activity.workoutPlan?.exercises || []).forEach((ex, idx) => {
+                        newScheduledActivity.workoutProgress[idx] = {
+                            sets: Array.from({length: parseInt(ex.sets) || 1}, () => ({ reps: '', weight: '', rpe: '8', completed: false })),
+                            completed: false
+                        };
+                    });
+                } else if (activity.type === 'pomodoro') {
+                    newScheduledActivity.pomodoroState = { currentBlockIndex: 0, status: 'idle' };
+                    newScheduledActivity.paramStatus = Array(activity.params?.length || 0).fill(false);
+                } else { // generic
+                    newScheduledActivity.paramStatus = Array(activity.params?.length || 0).fill(false);
+                }
+
+                state.scheduledActivities[dateKey].push(newScheduledActivity);
+                state.scheduledActivities[dateKey].sort((a, b) => {
+                    if (a.startTime === "00:00" && b.startTime !== "00:00") return 1;
+                    if (a.startTime !== "00:00" && b.startTime === "00:00") return -1;
+                    return a.startTime.localeCompare(b.startTime);
+                });
+            }
+            
+            // *** REBUILT *** Centralized function to handle all completion updates
+            function updateTaskCompletion(scheduledId, paramIndex, workoutIndices, isChecked) {
+                const dateKey = state.currentDate.format('YYYY-MM-DD');
+                const item = state.scheduledActivities[dateKey]?.find(i => i.id === scheduledId);
+                if (!item) return;
+
+                // 1. Update the specific task's completion state
+                if (paramIndex !== null && paramIndex !== undefined) { // It's a generic/pomodoro task
+                    const activity = state.activities.find(a => a.id === item.activityId);
+                    if (activity && activity.params) {
+                        if (!item.paramStatus || item.paramStatus.length !== activity.params.length) {
+                            item.paramStatus = Array(activity.params.length).fill(false);
+                        }
+                        if (paramIndex < item.paramStatus.length) {
+                            item.paramStatus[parseInt(paramIndex)] = isChecked;
+                        }
+                    }
+                } else if (workoutIndices) { // It's a workout set
+                    const { exerciseIndex, setIndex } = workoutIndices;
+                    const setProgress = item.workoutProgress?.[exerciseIndex]?.sets?.[setIndex];
+                    if (setProgress) {
+                        setProgress.completed = isChecked;
+                        
+                        if (isChecked) {
+                            const setRow = DOMElements.plannerContainer.querySelector(`tr[data-scheduled-id='${scheduledId}'][data-exercise-index='${exerciseIndex}'][data-set-index='${setIndex}']`);
+                            if (setRow) {
+                                setProgress.weight = setRow.querySelector('.set-weight-input').value;
+                                setProgress.reps = setRow.querySelector('.set-reps-input').value;
+                                setProgress.rpe = setRow.querySelector('.set-rpe-input').value;
+                            }
+                            const setTimerId = `set-${scheduledId}-${exerciseIndex}-${setIndex}`;
+                            const restTimerId = `rest-${scheduledId}-${exerciseIndex}-${setIndex}`;
+                            let setTimer = timerManager.get(setTimerId);
+                            let restTimer = timerManager.get(restTimerId);
+                            if (setTimer) {
+                                timerManager.pause(setTimerId);
+                                setProgress.setDuration = setTimer.elapsed;
+                            }
+                            if (restTimer) {
+                                timerManager.pause(restTimerId);
+                                setProgress.restDuration = restTimer.duration - restTimer.elapsed;
+                            }
+                        } else {
+                            delete setProgress.setDuration;
+                            delete setProgress.restDuration;
+                        }
+
+                        const allSetsCompleted = item.workoutProgress[exerciseIndex].sets.every(s => s.completed);
+                        item.workoutProgress[exerciseIndex].completed = allSetsCompleted;
+                    }
+                }
+                
+                // 2. Recalculate all points for the day based on the new state
+                recalculateDailyPoints(dateKey);
+
+                // 3. Trigger a full re-render which also updates charts.
+                render({ preserveOpenState: true });
+            }
+
+
+            function deleteScheduledActivity(scheduledId) {
+                const dateKey = state.currentDate.format('YYYY-MM-DD');
+                if (!state.scheduledActivities[dateKey]) return;
+
+                const itemIndex = state.scheduledActivities[dateKey].findIndex(i => i.id === scheduledId);
+
+                if (itemIndex > -1) {
+                    const item = state.scheduledActivities[dateKey][itemIndex];
+                    timerManager.stop(`pomodoro-${scheduledId}`);
+                    if (item.workoutProgress) {
+                        Object.keys(item.workoutProgress).forEach(exIndex => {
+                            item.workoutProgress[exIndex].sets.forEach((s, setIndex) => {
+                                timerManager.stop(`set-${scheduledId}-${exIndex}-${setIndex}`);
+                                timerManager.stop(`rest-${scheduledId}-${exIndex}-${setIndex}`);
+                            });
+                        });
+                    }
+
+                    state.scheduledActivities[dateKey].splice(itemIndex, 1);
+
+                    if (state.scheduledActivities[dateKey].length === 0) {
+                        delete state.scheduledActivities[dateKey];
+                    }
+                }
+                render(); // FIX: render should be called after modification
+            }
+            
+
+            function recalculateDailyPoints(dateKey) {
+                if (!dateKey) {
+                    console.warn("recalculateDailyPoints called without dateKey");
+                    return;
+                }
+
+                let dailyTotalPointsByCategory = {};
+                for (const catId in CATEGORIES) {
+                    dailyTotalPointsByCategory[catId] = 0;
+                }
+
+                const scheduledItems = state.scheduledActivities[dateKey] || [];
+
+                scheduledItems.forEach(item => {
+                    const activity = state.activities.find(a => a.id === item.activityId);
+                    if (!activity || !activity.categoryId || !CATEGORIES[activity.categoryId]) {
+                        return;
+                    }
+                    const categoryId = activity.categoryId;
+
+                    if (activity.type === 'generic' || activity.type === 'pomodoro') {
+                        if (activity.params && item.paramStatus) {
+                            activity.params.forEach((param, index) => {
+                                if (item.paramStatus[index] === true && param.points) {
+                                    dailyTotalPointsByCategory[categoryId] += parseInt(param.points) || 0;
+                                }
+                            });
+                        }
+                    } else if (activity.type === 'workout') {
+                        if (activity.workoutPlan?.exercises && item.workoutProgress) {
+                             activity.workoutPlan.exercises.forEach((exercise, exIndex) => {
+                                const progress = item.workoutProgress[exIndex];
+                                if (progress && progress.sets) {
+                                    progress.sets.forEach(set => {
+                                        if (set.completed) {
+                                            dailyTotalPointsByCategory[categoryId] += parseInt(exercise.points) || 0;
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    }
+                });
+
+                (state.nutritionLog[dateKey] || []).forEach(entry => {
+                    dailyTotalPointsByCategory['food'] += entry.points || 0;
+                });
+
+                state.pointsLog[dateKey] = dailyTotalPointsByCategory;
+            }
+
+            function openWorkoutModal(id = null) {
+                DOMElements.workoutForm.reset();
+                DOMElements.workoutExercisesContainer.innerHTML = '';
+                populateMuscleGroupSelect(); 
+                DOMElements.workoutIdInput.value = '';
+                DOMElements.deleteWorkoutBtn.classList.add('hidden');
+
+                if (id) {
+                    const activity = state.activities.find(a => a.id === id);
+                    if (!activity || activity.type !== 'workout') return;
+                    DOMElements.workoutModalTitle.textContent = 'Editar Rutina';
+                    DOMElements.workoutNameInput.value = activity.name;
+                    DOMElements.workoutIdInput.value = activity.id;
+                    (activity.workoutPlan?.exercises || []).forEach(ex => addExerciseToWorkoutDOM(ex));
+                    DOMElements.deleteWorkoutBtn.classList.remove('hidden');
+                } else {
+                    DOMElements.workoutModalTitle.textContent = 'Crear Rutina de Entrenamiento';
+                }
+
+                toggleModal('workout-modal', true);
+            }
+
+
+            function populateMuscleGroupSelect() {
+                const groups = Object.keys(EXERCISES);
+                groups.sort();
+                DOMElements.muscleGroupSelect.innerHTML = `<option value="">Selecciona grupo...</option>` +
+                    groups.map(group => `<option value="${group}">${group.charAt(0).toUpperCase() + group.slice(1)}</option>`).join('');
+                populateExerciseSelect();
+            }
+
+            function populateExerciseSelect() {
+                const selectedGroup = DOMElements.muscleGroupSelect.value;
+                let exercises = [];
+                if (selectedGroup && EXERCISES[selectedGroup]) {
+                    exercises = [...EXERCISES[selectedGroup]]; 
+                    exercises.sort(); 
+                }
+                DOMElements.exerciseSelect.innerHTML = exercises.length > 0 ?
+                    exercises.map(ex => `<option value="${ex}">${ex}</option>`).join('') :
+                    `<option value="" disabled>Selecciona ejercicio...</option>`;
+                DOMElements.exerciseSelect.disabled = exercises.length === 0;
+            }
+
+
+            function handleAddCustomExercise() {
+                const customExercise = prompt("Nombre del ejercicio personalizado:");
+                if (customExercise && customExercise.trim() !== '') {
+                    const trimmedName = customExercise.trim();
+                    let exists = false;
+                     Array.from(DOMElements.exerciseSelect.options).forEach(opt => {
+                         if(opt.value === trimmedName) exists = true;
+                     });
+                     if(!exists) {
+                         const option = new Option(trimmedName, trimmedName, true, true);
+                         DOMElements.exerciseSelect.add(option);
+                         DOMElements.exerciseSelect.disabled = false; 
+                     } else {
+                         DOMElements.exerciseSelect.value = trimmedName;
+                     }
+                }
+            }
+
+            function handleAddExerciseToWorkout() {
+                const name = DOMElements.exerciseSelect.value;
+                const sets = parseInt(document.getElementById('exercise-sets').value);
+                const reps = document.getElementById('exercise-reps').value.trim();
+
+                if (!name) {
+                     showCustomAlert("Por favor, selecciona o crea un ejercicio.");
+                     return;
+                }
+                if (isNaN(sets) || sets < 1) {
+                     showCustomAlert("Número de series inválido.");
+                     return;
+                }
+                 if (!reps) {
+                     showCustomAlert("Define las repeticiones (ej. 8-12, 10, AMRAP).");
+                     return;
+                 }
+
+
+                const exerciseData = {
+                    name: name,
+                    weight: parseFloat(document.getElementById('exercise-weight').value) || 0,
+                    points: parseInt(document.getElementById('exercise-points').value) || 0,
+                    sets: sets,
+                    reps: reps,
+                    notes: document.getElementById('exercise-notes').value.trim(),
+                };
+
+                addExerciseToWorkoutDOM(exerciseData);
+                document.getElementById('exercise-weight').value = 20;
+                document.getElementById('exercise-points').value = 1;
+                document.getElementById('exercise-sets').value = 4;
+                document.getElementById('exercise-reps').value = '8-12';
+                document.getElementById('exercise-notes').value = '';
+                DOMElements.exerciseSelect.selectedIndex = 0;
+            }
+
+            function addExerciseToWorkoutDOM(exerciseData) {
+                const div = document.createElement('div');
+                div.className = 'exercise-entry flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded shadow-sm';
+                const escapedData = JSON.stringify(exerciseData).replace(/'/g, "\\'");
+
+                div.innerHTML = `
+                    <div class="flex-grow overflow-hidden mr-2">
+                        <p class="font-bold text-sm truncate">${exerciseData.name} ${exerciseData.points > 0 ? `<span class="text-xs font-bold text-yellow-500">(${exerciseData.points} pts/serie)</span>` : ''}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">${exerciseData.sets}x${exerciseData.reps} ${exerciseData.weight > 0 ? ` @ ${exerciseData.weight}kg` : ''} ${exerciseData.notes ? `<span class="italic">(${exerciseData.notes})</span>` : ''}</p>
+                    </div>
+                    <button type="button" class="remove-exercise-btn text-red-500 hover:text-red-700 flex-shrink-0"><i class="fas fa-trash"></i></button>
+                    <input type="hidden" class="exercise-data" value='${escapedData}'>
+                `;
+                DOMElements.workoutExercisesContainer.appendChild(div);
+            }
+
+            function handleWorkoutFormSubmit(e) {
+                e.preventDefault();
+                const workoutId = parseInt(DOMElements.workoutIdInput.value);
+                const workoutName = DOMElements.workoutNameInput.value.trim();
+                if (!workoutName) {
+                     showCustomAlert('La rutina debe tener un nombre.');
+                     return;
+                }
+
+                const exercises = Array.from(document.querySelectorAll('.exercise-data')).map(input => {
+                    try {
+                        return JSON.parse(input.value);
+                    } catch (error) {
+                        console.error("Error parsing exercise data:", input.value, error);
+                        return null;
+                    }
+                }).filter(ex => ex !== null);
+
+
+                if (exercises.length === 0) {
+                     showCustomAlert('Añade al menos un ejercicio a la rutina.');
+                     return;
+                }
+
+                const workoutData = {
+                    type: 'workout',
+                    name: workoutName,
+                    categoryId: 'sport',
+                    workoutPlan: { exercises }
+                };
+
+                let activityUpdated = false;
+                if (workoutId) {
+                    const index = state.activities.findIndex(a => a.id === workoutId);
+                    if (index > -1) {
+                         if (JSON.stringify(state.activities[index].workoutPlan) !== JSON.stringify(workoutData.workoutPlan) || state.activities[index].name !== workoutData.name) {
+                             state.activities[index] = { ...state.activities[index], ...workoutData };
+                             activityUpdated = true;
+                             Object.keys(state.scheduledActivities).forEach(dateKey => {
+                                 state.scheduledActivities[dateKey].forEach(item => {
+                                     if(item.activityId === workoutId) {
+                                         const newProgress = {};
+                                         exercises.forEach((ex, idx) => {
+                                             const oldProgressSet = item.workoutProgress?.[idx]?.sets || [];
+                                             newProgress[idx] = {
+                                                 sets: Array.from({length: parseInt(ex.sets) || 1}, (_, i) => oldProgressSet[i] || ({ reps: '', weight: '', rpe: '8', completed: false })),
+                                                 completed: (parseInt(ex.sets) || 1) > 0 && Array.from({length: parseInt(ex.sets) || 1}, (_, i) => oldProgressSet[i]?.completed ?? false).every(c => c)
+                                             };
+                                         });
+                                         item.workoutProgress = newProgress;
+                                     }
+                                 });
+                             });
+                         }
+                    } else {
+                         state.activities.push({ id: Date.now(), ...workoutData });
+                         activityUpdated = true;
+                    }
+                } else {
+                    state.activities.push({ id: Date.now(), ...workoutData });
+                    activityUpdated = true;
+                }
+
+                toggleModal('workout-modal', false);
+                if (activityUpdated) {
+                    render();
+                }
+            }
+
+
+            function handlePomodoroAction(scheduledId, action) {
+                const dateKey = state.currentDate.format('YYYY-MM-DD');
+                const timerId = `pomodoro-${scheduledId}`;
+                let timer = timerManager.get(timerId);
+
+                const item = state.scheduledActivities[dateKey]?.find(i => i.id === scheduledId);
+                if (!timer && item && item.pomodoroState?.status !== 'finished') {
+                    const activity = state.activities.find(a => a.id === item.activityId);
+                    if(activity && activity.params && activity.params.length > item.pomodoroState.currentBlockIndex) {
+                        const currentBlock = activity.params[item.pomodoroState.currentBlockIndex];
+                        timer = timerManager.create(timerId, {
+                            mode: 'countdown',
+                            duration: parseTimeToMs(currentBlock.value),
+                            onEnd: () => advancePomodoro(scheduledId)
+                        });
+                        console.log("Pomodoro timer recreated for", scheduledId);
+                    }
+                }
+
+                if (!timer && action !== 'reset') return;
+
+
+                switch(action) {
+                    case 'toggle':
+                        if (timer.isRunning) timerManager.pause(timerId);
+                        else timerManager.start(timerId);
+                        break;
+                    case 'skip':
+                         const activitySkip = state.activities.find(a => a.id === item?.activityId);
+                         if (item && activitySkip?.params?.[item.pomodoroState.currentBlockIndex]?.points > 0) {
+                             if(item.paramStatus) item.paramStatus[item.pomodoroState.currentBlockIndex] = false;
+                         }
+                        timerManager.stop(timerId);
+                        advancePomodoro(scheduledId, true);
+                        break;
+                    case 'reset':
+                        const itemReset = state.scheduledActivities[dateKey]?.find(i => i.id === scheduledId);
+                        if(itemReset) {
+                            itemReset.pomodoroState = { currentBlockIndex: 0, status: 'idle' };
+                            itemReset.paramStatus = Array(itemReset.paramStatus?.length || 0).fill(false);
+                            timerManager.stop(timerId);
+                             const activityReset = state.activities.find(a => a.id === itemReset.activityId);
+                             if (activityReset?.params?.[0]) {
+                                 timerManager.create(timerId, {
+                                     mode: 'countdown',
+                                     duration: parseTimeToMs(activityReset.params[0].value),
+                                     onEnd: () => advancePomodoro(scheduledId)
+                                 });
+                             }
+                             render();
+                        }
+                        break;
+                }
+                render({ preserveOpenState: true });
+                saveState();
+            }
+
+            function advancePomodoro(scheduledId, wasSkipped = false) {
+                const dateKey = state.currentDate.format('YYYY-MM-DD');
+                const item = state.scheduledActivities[dateKey]?.find(i => i.id === scheduledId);
+                const activity = state.activities.find(a => a.id === item?.activityId);
+
+                if (!item || !activity || !activity.params || !item.pomodoroState) {
+                    console.error("Error advancing pomodoro: item or activity not found/invalid", scheduledId);
+                    return;
+                }
+
+                const currentBlockIndex = item.pomodoroState.currentBlockIndex;
+
+                if (!wasSkipped && currentBlockIndex < activity.params.length && activity.params[currentBlockIndex].points > 0) {
+                    // Use the central update function to ensure points and UI are in sync
+                    updateTaskCompletion(scheduledId, currentBlockIndex, null, true);
+                }
+
+                item.pomodoroState.currentBlockIndex++;
+                const nextBlockIndex = item.pomodoroState.currentBlockIndex;
+
+                if (nextBlockIndex >= activity.params.length) {
+                    item.pomodoroState.status = 'finished';
+                    timerManager.stop(`pomodoro-${scheduledId}`);
+                } else {
+                    item.pomodoroState.status = 'running';
+                    const nextBlock = activity.params[nextBlockIndex];
+                    const nextDuration = parseTimeToMs(nextBlock.value);
+
+                    const newTimer = timerManager.create(`pomodoro-${item.id}`, {
+                        mode: 'countdown',
+                        duration: nextDuration,
+                        onEnd: () => advancePomodoro(scheduledId)
+                    });
+                    timerManager.start(newTimer.id);
+                }
+                
+                // If skipped, the updateTaskCompletion wasn't called, so we need a render
+                if(wasSkipped) {
+                    render();
+                }
+            }
+
+            function renderPomodoroCard(item, activity) {
+                const category = CATEGORIES[activity.categoryId];
+                let timeDisplay = (item.startTime && item.startTime !== "00:00") ? `${item.startTime}${item.endTime && item.endTime !== "00:00" ? ' - ' + item.endTime : ''}` : 'Sin Hora';
+                const durationText = getDurationText(item.startTime, item.endTime);
+
+                if (!item.pomodoroState) item.pomodoroState = { currentBlockIndex: 0, status: 'idle' };
+                if (!item.paramStatus) item.paramStatus = Array(activity.params?.length || 0).fill(false);
+
+
+                const timerId = `pomodoro-${item.id}`;
+                let timer = timerManager.get(timerId);
+                const currentState = item.pomodoroState;
+                const currentBlockIndex = currentState.currentBlockIndex;
+
+                if (currentState.status === 'finished') {
+                    const allParamsCompletedItem = {...item, paramStatus: Array(activity.params?.length || 0).fill(true) };
+                    return renderGenericActivityCard(allParamsCompletedItem, activity);
+                }
+
+                if (!timer && currentBlockIndex < activity.params.length) {
+                    const blockToCreate = activity.params[currentBlockIndex];
+                    timer = timerManager.create(timerId, {
+                        mode: 'countdown',
+                        duration: parseTimeToMs(blockToCreate.value),
+                        elapsed: parseTimeToMs(blockToCreate.value), 
+                        isRunning: false,
+                        onEnd: () => advancePomodoro(item.id)
+                    });
+                }
+
+                if (!timer || currentBlockIndex >= activity.params.length) {
+                    return renderGenericActivityCard(item, activity);
+                }
+
+
+                const currentBlock = activity.params[currentBlockIndex];
+                const isRunning = timer.isRunning;
+
+                const progressDots = activity.params.map((param, index) => {
+                    const isCompleted = item.paramStatus[index];
+                    const isCurrent = index === currentBlockIndex;
+                    let bgColor = 'bg-gray-300 dark:bg-gray-600'; 
+                    let pulseClass = '';
+
+                    if (isCompleted) {
+                        bgColor = param.points > 0 ? `bg-${category.color}-500` : `bg-${category.color}-300 dark:bg-${category.color}-700`;
+                    } else if (isCurrent) {
+                        bgColor = param.points > 0 ? `bg-${category.color}-400 dark:bg-${category.color}-600` : `bg-gray-400 dark:bg-gray-500`; 
+                        if (isRunning) {
+                            pulseClass = 'animate-pulse';
+                        }
+                    }
+                    return `<div class="w-3 h-3 ${bgColor} ${pulseClass} rounded-full" title="${param.name} ${isCompleted ? '(Completado)' : ''}"></div>`;
+                }).join('');
+
+                const totalPointsPossible = (activity.params || []).reduce((sum, p) => sum + (p.points || 0), 0);
+                const earnedPoints = (activity.params || []).reduce((sum, p, index) => (item.paramStatus && item.paramStatus[index]) ? sum + (p.points || 0) : sum, 0);
+
+                return `
+                <details class="draggable-card bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-4 border-${category.color}-400 mb-2" draggable="true" data-scheduled-id="${item.id}">
+                    <summary class="p-4 list-none">
+                         <div class="flex justify-between items-start">
+                             <div class="flex items-start">
+                                 <i class="fas fa-grip-vertical mr-3 mt-1 text-gray-300 dark:text-gray-600 cursor-grab"></i>
+                                 <div>
+                                     <p class="text-sm font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-1">${timeDisplay} ${durationText}</p>
+                                     <p class="font-bold text-lg leading-tight">${activity.name}</p>
+                                     <div class="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                         <i class="fas ${category.icon} mr-1 text-${category.color}-500"></i><span>${category.name}</span>
+                                         <span class="mx-2">|</span><span class="points-display flex items-center"><i class="fas fa-star mr-1 text-yellow-500"></i><span>${earnedPoints} / ${totalPointsPossible} pts</span></span>
+                                     </div>
+                                 </div>
+                             </div>
+                             <button data-action="delete-scheduled" data-scheduled-id="${item.id}" class="text-gray-400 hover:text-red-500 ml-2 flex-shrink-0"><i class="fas fa-trash-alt"></i></button>
+                         </div>
+                    </summary>
+                    <div class="content px-4 pb-4">
+                         <div class="mt-2 bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-center">
+                             <p class="font-semibold text-gray-600 dark:text-gray-300 text-sm">${currentBlock?.name || 'Completado'}</p>
+                             <p class="timer-display text-5xl font-mono my-2 tabular-nums" data-timer-id="${timerId}">${formatTime(timer.elapsed)}</p>
+                             <div class="flex justify-center items-center space-x-2 mt-3">${progressDots}</div>
+                         </div>
+                         <div class="flex justify-center space-x-2 mt-4">
+                             <button data-action="toggle-pomodoro" data-scheduled-id="${item.id}" class="w-16 h-9 rounded-lg font-bold text-sm ${isRunning ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'} text-white flex items-center justify-center"><i class="fas ${isRunning ? 'fa-pause' : 'fa-play'}"></i></button>
+                             <button data-action="skip-pomodoro" data-scheduled-id="${item.id}" class="w-16 h-9 rounded-lg font-bold text-sm bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center" title="Saltar bloque"><i class="fas fa-forward"></i></button>
+                             <button data-action="reset-pomodoro" data-scheduled-id="${item.id}" class="w-16 h-9 rounded-lg font-bold text-sm bg-gray-400 hover:bg-gray-500 text-white flex items-center justify-center" title="Reiniciar Pomodoro"><i class="fas fa-undo"></i></button>
+                         </div>
+                    </div>
+                </details>`;
+            }
+
+            function renderGenericActivityCard(item, activity) {
+                const category = CATEGORIES[activity.categoryId] || { name: 'Sin Cat.', color: 'gray', icon: 'fa-question' };
+                let timeDisplay = (item.startTime && item.startTime !== "00:00") ? `${item.startTime}${item.endTime && item.endTime !== "00:00" ? ' - ' + item.endTime : ''}` : 'Sin Hora';
+                const durationText = getDurationText(item.startTime, item.endTime);
+
+                if (!item.paramStatus || item.paramStatus.length !== (activity.params?.length || 0)) {
+                    item.paramStatus = Array(activity.params?.length || 0).fill(false);
+                }
+
+                const totalPointsPossible = (activity.params || []).reduce((sum, p) => sum + (p.points || 0), 0);
+                const earnedPoints = (activity.params || []).reduce((sum, p, index) => (item.paramStatus[index] ? sum + (p.points || 0) : sum), 0);
+
+                const parametersHtml = (activity.params || []).map((p, index) => {
+                    const isChecked = item.paramStatus[index];
+                    const labelClass = isChecked ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300';
+                    return `<div class="flex items-center py-1">
+                                <input type="checkbox" id="param-${item.id}-${index}" class="param-checkbox form-checkbox h-4 w-4 rounded text-${category.color}-600 focus:ring-${category.color}-500"
+                                       data-scheduled-id="${item.id}" data-param-index="${index}" ${isChecked ? 'checked' : ''}>
+                                <label for="param-${item.id}-${index}" class="flex-grow ${labelClass} text-sm ml-2 cursor-pointer">
+                                    <strong class="font-medium">${p.name}</strong> ${p.value ? `- ${p.value}` : ''}
+                                </label>
+                                ${p.points > 0 ? `<span class="text-xs font-semibold text-yellow-600 dark:text-yellow-400 ml-2">(${p.points} pts)</span>` : ''}
+                            </div>`;
+                }).join('');
+
+                return `
+                <details class="draggable-card bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-4 border-${category.color}-400 mb-2" draggable="true" data-scheduled-id="${item.id}">
+                    <summary class="p-4 list-none">
+                        <div class="flex justify-between items-start">
+                             <div class="flex items-start">
+                                 <i class="fas fa-grip-vertical mr-3 mt-1 text-gray-300 dark:text-gray-600 cursor-grab"></i>
+                                 <div>
+                                     <p class="text-sm font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-1">${timeDisplay} ${durationText}</p>
+                                     <p class="font-bold text-lg leading-tight">${activity.name}</p>
+                                     <div class="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                         <i class="fas ${category.icon} mr-1 text-${category.color}-500"></i><span>${category.name}</span>
+                                         ${totalPointsPossible > 0 ? `<span class="mx-2">|</span><span class="points-display flex items-center"><i class="fas fa-star mr-1 text-yellow-500"></i><span>${earnedPoints} / ${totalPointsPossible} pts</span></span>` : ''}
+                                     </div>
+                                 </div>
+                             </div>
+                             <button data-action="delete-scheduled" data-scheduled-id="${item.id}" class="text-gray-400 hover:text-red-500 ml-2 flex-shrink-0"><i class="fas fa-trash-alt"></i></button>
+                         </div>
+                    </summary>
+                    <div class="content px-4 pb-4">
+                         ${parametersHtml ? `<div class="space-y-1 border-t dark:border-gray-700 pt-2 mt-2">${parametersHtml}</div>` : '<p class="text-sm text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t dark:border-gray-700">No hay subtareas definidas.</p>'}
+                    </div>
+                </details>`;
+            }
+
+            // =================================================================
+            // GESTIÓN DE DATOS Y MODAL DE CONFIRMACIÓN
+            // =================================================================
+            function exportData() {
+                const exportState = { ...state, currentDate: state.currentDate.toISOString() };
+                const exportTimers = sessionStorage.getItem('lifePlannerTimers');
+                const dataToExport = JSON.stringify({ state: exportState, timers: exportTimers ? JSON.parse(exportTimers) : {} }, null, 2);
+
+                const blob = new Blob([dataToExport], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `planeador_backup_${dayjs().format('YYYYMMDD_HHmm')}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showCustomAlert("Datos exportados con éxito.");
+            }
+
+            function importData(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    showConfirm('Importar Datos', '⚠️ ¡Atención! Esto sobreescribirá todos tus datos actuales (actividades, horarios, puntos, etc.) con el contenido del archivo. ¿Estás seguro de que quieres continuar?', () => {
+                        try {
+                            const data = e.target.result;
+                            const parsedData = JSON.parse(data);
+
+                            if (!parsedData || typeof parsedData.state !== 'object') {
+                                throw new Error("El archivo no tiene la estructura esperada (falta 'state').");
+                            }
+
+                            if (parsedData.state.currentDate) {
+                                parsedData.state.currentDate = dayjs(parsedData.state.currentDate);
+                                if (!parsedData.state.currentDate.isValid()) {
+                                    console.warn("Fecha importada inválida, usando fecha actual.");
+                                    parsedData.state.currentDate = dayjs();
+                                }
+                            } else {
+                                parsedData.state.currentDate = dayjs();
+                            }
+
+                            localStorage.removeItem('lifePlannerState');
+                            localStorage.removeItem('lifePlannerTheme');
+                            sessionStorage.removeItem('lifePlannerTimers');
+
+                            localStorage.setItem('lifePlannerState', JSON.stringify(parsedData.state));
+                            if (parsedData.state.theme) {
+                                localStorage.setItem('lifePlannerTheme', parsedData.state.theme);
+                            }
+                            if (parsedData.timers && Object.keys(parsedData.timers).length > 0) {
+                                sessionStorage.setItem('lifePlannerTimers', JSON.stringify(parsedData.timers));
+                            }
+
+
+                            showCustomAlert('Datos importados con éxito. La página se recargará.');
+                            setTimeout(() => location.reload(), 1500);
+
+                        } catch (error) {
+                            console.error("Error al importar datos:", error);
+                            showCustomAlert(`Error al importar: ${error.message}. Asegúrate de seleccionar un archivo de respaldo válido.`);
+                        } finally {
+                            event.target.value = '';
+                        }
+                    }, () => {
+                        event.target.value = '';
+                    });
+                };
+                reader.onerror = function() {
+                    showCustomAlert("Error al leer el archivo.");
+                    event.target.value = '';
+                };
+                reader.readAsText(file);
+            }
+
+
+            function showConfirm(title, message, onConfirm, onCancel = () => {}) {
+                const modal = DOMElements.confirmModal;
+                modal.querySelector('#confirm-title').textContent = title;
+                modal.querySelector('#confirm-message').textContent = message;
+
+                const okBtn = modal.querySelector('#confirm-ok-btn');
+                const cancelBtn = modal.querySelector('#confirm-cancel-btn');
+
+                const newOkBtn = okBtn.cloneNode(true);
+                const newCancelBtn = cancelBtn.cloneNode(true);
+                okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+                cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+
+                newOkBtn.addEventListener('click', () => {
+                    toggleModal('confirm-modal', false);
+                    onConfirm();
+                });
+
+                newCancelBtn.addEventListener('click', () => {
+                    toggleModal('confirm-modal', false);
+                    onCancel();
+                });
+
+                modal.onclick = (e) => {
+                     if (e.target === modal) {
+                         toggleModal('confirm-modal', false);
+                         onCancel();
+                     }
+                };
+
+                toggleModal('confirm-modal', true);
+            }
+
+            // Simple replacement for alert() to avoid blocking behavior
+            function showCustomAlert(message) {
+                 showConfirm("Notificación", message, () => {});
+            }
+            
+
+            init();
+        });
+    </script>
+</body>
+
+</html>
